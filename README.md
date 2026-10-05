@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CeilPlan
 
-## Getting Started
+현장 조건과 사용자 입력을 바탕으로 천장 자재 물량을 정리하는 개인 포트폴리오 프로젝트입니다.
+Next.js App Router, TypeScript, Tailwind를 사용합니다.
 
-First, run the development server:
+## 실행
 
-```bash
+```sh
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 http://localhost:3000 을 엽니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 현재 구현
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 시안 기반 사이드바와 프로젝트 헤더
+- 데스크톱 3열, 태블릿·모바일 세로 스택
+- 공간·계산 조건·Loss·단가 입력
+- 입력 치수에 따른 SVG 공간 미리보기
+- 현장 요소 위치·치수 입력, 표시와 삭제
+- 프로젝트 생성·브라우저 저장·목록·불러오기
+- 요약 카드·상세 표·금액·계산 근거 분리
 
-## Learn More
+현재 계산 가능한 값은 공간 면적입니다. 자재 수량·발주 금액은 산출 방식 확인 전까지
+기준 미확정으로 표시합니다. 시안에 있는 샘플 수량을 실제 결과로 사용하지 않습니다.
+브라우저 저장 데이터는 다른 기기와 동기화되지 않습니다.
 
-To learn more about Next.js, take a look at the following resources:
+## 개발 순서와 파일 구조
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+[구현 계획](docs/implementation-plan.md)을 먼저 읽으세요.
+작업 원칙은 [AGENTS.md](AGENTS.md), 제품 범위는 [제품 명세](docs/product-spec.md),
+계산 기준은 [도메인 규칙](docs/domain-rules.md)을 참고합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 검증
 
-## Deploy on Vercel
+```sh
+npm run lint
+npx tsc --noEmit
+npm test
+npm run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+테스트는 Node.js 내장 테스트 러너와 TypeScript 타입 제거 기능을 사용합니다.
+현재 환경의 Node.js 24에서 확인했습니다. 면적 변환·잘못된 입력·0과 미입력의 구분·
+미확정 상태를 검증하며, 실제 자재 수량 검산 테스트는 산출 기준 확정 후 추가합니다.
