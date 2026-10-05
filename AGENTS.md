@@ -1,9 +1,88 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# AGENTS.md
 
-# This is NOT the Next.js you know
+## Project Overview
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+CeilPlan은 소장, 시공회사, 견적/공무/발주 담당자가
+현장 조건을 입력하면 천장 자재의 예상 필요 수량과
+예상 발주 금액을 계산·관리할 수 있는 B2B 웹 서비스다.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+이 프로젝트의 핵심은
+현장 조건 → 자재 증감 → 예상 발주 수량 → 예상 발주 금액
+의 흐름을 명확하게 보여주는 것이다.
 
-<!-- END:nextjs-agent-rules -->
+## Core Rules
+
+- 계산 기준을 임의로 만들지 않는다.
+- docs/domain-rules.md에 근거 없는 값은 하드코딩하지 않는다.
+- 불확실한 계산은 0이나 임의값으로 처리하지 않고 “기준 미확정”으로 표시한다.
+- docs/product-spec.md의 제품 목적과 MVP 범위를 우선 따른다.
+- 애매한 도메인 규칙은 추측하지 말고 사용자에게 질문한다.
+
+## UI / UX Rules
+
+- 첨부된 CeilPlan UI 시안은 참고 기준이다.
+- 디자인을 픽셀 단위로 복제하는 것이 목적은 아니다.
+- 핵심은 정보 구조, 가독성, B2B 툴다운 정리감이다.
+- 데스크톱에서는 3열 구조를 우선한다.
+  - 왼쪽: 입력
+  - 가운데: 2D 미리보기
+  - 오른쪽: 산출 결과
+- 결과 영역은 반드시
+  - 요약 카드
+  - 상세 표
+  - 예상 금액
+  - 계산 근거
+    로 분리한다.
+- MVP에서는 3D 보기를 구현하지 않는다.
+
+## Architecture Rules
+
+- UI와 계산 로직을 분리한다.
+- 계산 엔진은 React/Next.js에 의존하지 않는 순수 함수 중심으로 작성한다.
+- 계산 흐름은 다음 책임을 나눠서 구성한다.
+
+입력 검증
+→ 기본 수량 계산
+→ 현장 요소별 추가/공제/보강
+→ Loss 적용
+→ 발주 단위 반올림
+→ 단가 적용
+→ 예상 금액 계산
+
+- SVG는 계산 근거를 시각적으로 보여주는 용도이며, SVG 자체를 해석해서 계산하지 않는다.
+- 계산 엔진과 SVG는 같은 입력 데이터를 사용한다.
+
+## Tech Rules
+
+- Next.js + TypeScript + Tailwind를 사용한다.
+- App Router 기준으로 구성한다.
+- 타입은 실제 도메인 모델을 명확히 표현하는 목적에 사용한다.
+- 내부 길이 단위는 특별한 이유가 없으면 mm 기준으로 통일한다.
+- 과도한 추상화는 피한다.
+- 불필요한 라이브러리는 추가하지 않는다.
+
+## Testing
+
+- 계산 로직 테스트를 UI 테스트보다 우선한다.
+- 기대값은 임의로 만들지 않는다.
+- 사용자 검산 사례나 확정된 규칙을 기준으로 테스트한다.
+
+## Scope
+
+MVP 범위를 벗어나는 기능은 임의로 추가하지 않는다.
+
+초기 제외:
+
+- 3D
+- AI 자동 견적
+- 실시간 자재 시세 연동
+- 로그인/권한 관리
+- 다중 공간
+- 복잡한 ERP 기능
+- 다른 공종 확장
+
+## Process
+
+- 먼저 구조를 제안하고, 그 다음 구현한다.
+- 한 번에 모든 파일을 길게 작성하기보다 단계적으로 구현한다.
+- 변경 시 관련 파일과 구조를 함께 설명한다.
