@@ -1,11 +1,17 @@
-export default function ProjectHeader() {
+interface ProjectHeaderProps {
+  projectName?: String;
+}
+
+export default function ProjectHeader({
+  projectName = "",
+}: ProjectHeaderProps) {
   return (
     <header className="border-b border-blue-100 bg-white px-5 py-6 sm:px-6">
       <p className="mb-2 text-xs text-slate-500">프로젝트 / 천장 자재 산출</p>
 
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          새 현장 프로젝트
+          {projectName.trim() || "새 현장 프로젝트"}
         </h1>
 
         <span className="rounded-md bg-teal-100 px-2 py-1 text-xs font-semibold text-teal-700">
