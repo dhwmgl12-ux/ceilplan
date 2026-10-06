@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { SiteInput } from "@/types/ceilplan";
 import ProjectHeader from "@/components/layout/ProjectHeader";
 import InputPanel from "./InputPanel";
 import CeilingPreview from "./CeilingPreview";
+import type { MaterialInput, SiteInput } from "@/types/ceilplan";
+import MaterialInputPanel from "./MaterialInputPanel";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -12,6 +13,28 @@ export default function CeilingWorkspace() {
     widthMm: "",
     lengthMm: "",
   });
+
+  const [materialInputs, setMaterialInputs] = useState<MaterialInput>({
+    mbarSpacingMm: "",
+    carryingSpacingMm: "",
+    boardWidthMm: "",
+    boardLengthMm: "",
+    layerCount: "",
+    boardLossPercent: "",
+    metalLossPercent: "",
+    mbarStockLengthMm: "",
+    carryingStockLengthMm: "",
+    boardUnitPrice: "",
+    mbarUnitPrice: "",
+    carryingUnitPrice: "",
+  });
+
+  function handleMaterialChange(field: keyof MaterialInput, value: string) {
+    setMaterialInputs((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
 
   function handleInputChange(field: keyof SiteInput, value: string) {
     setInputs((previous) => ({
@@ -26,7 +49,14 @@ export default function CeilingWorkspace() {
 
       <main className="p-4 sm:p-6">
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
-          <InputPanel inputs={inputs} onChange={handleInputChange} />
+          <div className="min-w-0 space-y-4">
+            <InputPanel inputs={inputs} onChange={handleInputChange} />
+
+            <MaterialInputPanel
+              inputs={materialInputs}
+              onChange={handleMaterialChange}
+            />
+          </div>
 
           <CeilingPreview widthMm={inputs.widthMm} lengthMm={inputs.lengthMm} />
 

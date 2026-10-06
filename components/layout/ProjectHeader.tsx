@@ -1,5 +1,5 @@
 interface ProjectHeaderProps {
-  projectName?: String;
+  projectName?: string;
 }
 
 export default function ProjectHeader({
