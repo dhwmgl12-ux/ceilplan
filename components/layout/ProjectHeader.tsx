@@ -29,11 +29,6 @@ export default function ProjectHeader({
           <dt className="text-slate-500">천장 방식</dt>
           <dd className="font-medium">M-BAR + 석고보드</dd>
         </div>
-
-        <div className="flex gap-2">
-          <dt className="text-slate-500">저장 상태</dt>
-          <dd className="font-medium">저장 전</dd>
-        </div>
       </dl>
     </header>
   );
