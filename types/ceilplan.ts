@@ -58,3 +58,10 @@ export interface CalculationResult {
   // 단가 미입력이 하나라도 있으면 합계는 미완성입니다.
   totalEstimatedCost: number | null;
 }
+
+export interface Project {
+  id: string;
+  siteInput: SiteInput;
+  materialInput: MaterialInput;
+  updatedAt: string;
+}

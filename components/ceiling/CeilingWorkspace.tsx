@@ -4,14 +4,17 @@ import { useState } from "react";
 import type {
   CalculationResult,
   MaterialInput,
+  Project,
   SiteInput,
 } from "@/types/ceilplan";
+
 import { calculateBase, validateInputs } from "@/lib/calculations/base";
 import ProjectHeader from "@/components/layout/ProjectHeader";
 import InputPanel from "./InputPanel";
 import MaterialInputPanel from "./MaterialInputPanel";
 import CeilingPreview from "./CeilingPreview";
 import ResultsPanel from "./ResultsPanel";
+import ProjectManager from "./ProjectManager";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -19,6 +22,7 @@ export default function CeilingWorkspace() {
     widthMm: "",
     lengthMm: "",
   });
+  const [dirty, setDirty] = useState(false);
 
   const [materialInputs, setMaterialInputs] = useState<MaterialInput>({
     mbarSpacingMm: "",
@@ -45,6 +49,7 @@ export default function CeilingWorkspace() {
       [field]: value,
     }));
 
+    setDirty(true);
     setErrors([]);
 
     if (result) {
@@ -58,6 +63,7 @@ export default function CeilingWorkspace() {
       [field]: value,
     }));
 
+    setDirty(true);
     setErrors([]);
 
     if (result) {
@@ -86,11 +92,57 @@ export default function CeilingWorkspace() {
     }
   }
 
+  function handleLoadProject(project: Project) {
+    setInputs({ ...project.siteInput });
+    setMaterialInputs({ ...project.materialInput });
+
+    setResult(null);
+    setErrors([]);
+    setStale(false);
+    setDirty(false);
+  }
+
+  function handleNewProject() {
+    setInputs({
+      name: "",
+      widthMm: "",
+      lengthMm: "",
+    });
+
+    setMaterialInputs({
+      mbarSpacingMm: "",
+      carryingSpacingMm: "",
+      boardWidthMm: "",
+      boardLengthMm: "",
+      layerCount: "",
+      boardLossPercent: "",
+      metalLossPercent: "",
+      mbarStockLengthMm: "",
+      carryingStockLengthMm: "",
+      boardUnitPrice: "",
+      mbarUnitPrice: "",
+      carryingUnitPrice: "",
+    });
+
+    setResult(null);
+    setErrors([]);
+    setStale(false);
+    setDirty(false);
+  }
+
   return (
     <div className="min-w-0">
       <ProjectHeader projectName={inputs.name} />
 
       <main className="p-4 sm:p-6">
+        <ProjectManager
+          siteInput={inputs}
+          materialInput={materialInputs}
+          dirty={dirty}
+          onLoad={handleLoadProject}
+          onNew={handleNewProject}
+          onSaved={() => setDirty(false)}
+        />
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div className="min-w-0 space-y-4">
             <InputPanel inputs={inputs} onChange={handleInputChange} />
