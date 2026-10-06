@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type {
   CalculationResult,
+  CeilingFeature,
   MaterialInput,
   Project,
   SiteInput,
@@ -15,6 +16,7 @@ import MaterialInputPanel from "./MaterialInputPanel";
 import CeilingPreview from "./CeilingPreview";
 import ResultsPanel from "./ResultsPanel";
 import ProjectManager from "./ProjectManager";
+import FeatureInputPanel from "./FeatureInputPanel";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -42,6 +44,8 @@ export default function CeilingWorkspace() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [stale, setStale] = useState(false);
+  const [features, setFeatures] = useState<CeilingFeature[]>([]);
+  const [featureFormKey, setFeatureFormKey] = useState(0);
 
   function handleInputChange(field: keyof SiteInput, value: string) {
     setInputs((previous) => ({
@@ -95,6 +99,8 @@ export default function CeilingWorkspace() {
   function handleLoadProject(project: Project) {
     setInputs({ ...project.siteInput });
     setMaterialInputs({ ...project.materialInput });
+    setFeatures((project.features ?? []).map((feature) => ({ ...feature })));
+    setFeatureFormKey((previous) => previous + 1);
 
     setResult(null);
     setErrors([]);
@@ -124,10 +130,24 @@ export default function CeilingWorkspace() {
       carryingUnitPrice: "",
     });
 
+    setFeatureFormKey((previous) => previous + 1);
+
     setResult(null);
     setErrors([]);
     setStale(false);
     setDirty(false);
+    setFeatures([]);
+  }
+
+  function handleAddFeature(feature: CeilingFeature) {
+    setFeatures((previous) => [...previous, feature]);
+    setDirty(true);
+  }
+
+  function handleDeleteFeature(id: string) {
+    setFeatures((previous) => previous.filter((feature) => feature.id !== id));
+
+    setDirty(true);
   }
 
   return (
@@ -142,6 +162,7 @@ export default function CeilingWorkspace() {
           onLoad={handleLoadProject}
           onNew={handleNewProject}
           onSaved={() => setDirty(false)}
+          features={features}
         />
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div className="min-w-0 space-y-4">
@@ -150,6 +171,16 @@ export default function CeilingWorkspace() {
             <MaterialInputPanel
               inputs={materialInputs}
               onChange={handleMaterialChange}
+            />
+
+            <FeatureInputPanel
+              // 프로젝트 전환 시 작성 중인 요소 입력을 초기화합니다.
+              key={featureFormKey}
+              widthMm={inputs.widthMm}
+              lengthMm={inputs.lengthMm}
+              features={features}
+              onAdd={handleAddFeature}
+              onDelete={handleDeleteFeature}
             />
 
             <div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -192,7 +223,11 @@ export default function CeilingWorkspace() {
             </div>
           </div>
 
-          <CeilingPreview widthMm={inputs.widthMm} lengthMm={inputs.lengthMm} />
+          <CeilingPreview
+            widthMm={inputs.widthMm}
+            lengthMm={inputs.lengthMm}
+            features={features}
+          />
 
           <ResultsPanel result={result} stale={stale} />
         </div>

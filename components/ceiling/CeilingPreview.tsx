@@ -1,11 +1,19 @@
+import {
+  featureColors,
+  featureLabels,
+  type CeilingFeature,
+} from "@/types/ceilplan";
+
 interface CeilingPreviewProps {
   widthMm: string;
   lengthMm: string;
+  features: CeilingFeature[];
 }
 
 export default function CeilingPreview({
   widthMm,
   lengthMm,
+  features,
 }: CeilingPreviewProps) {
   const width = Number(widthMm);
   const length = Number(lengthMm);
@@ -17,6 +25,16 @@ export default function CeilingPreview({
     Number.isFinite(length) &&
     width > 0 &&
     length > 0;
+
+  const visibleFeatures = isValid
+    ? features.filter(
+        (feature) =>
+          feature.xMm + feature.widthMm <= width &&
+          feature.yMm + feature.lengthMm <= length,
+      )
+    : [];
+
+  const outsideCount = isValid ? features.length - visibleFeatures.length : 0;
 
   // SVG 내부 좌표 기준의 표시 영역입니다.
   // 실제 공간 치수나 시공 기준이 아닙니다.
@@ -75,6 +93,67 @@ export default function CeilingPreview({
             stroke="#334155"
             strokeWidth={3}
           />
+
+          {/* 현장 요소 */}
+          {visibleFeatures.map((feature) => {
+            const featureX = x + feature.xMm * scale;
+            const featureY = y + feature.yMm * scale;
+
+            const featureWidth = feature.widthMm * scale;
+            const featureHeight = feature.lengthMm * scale;
+
+            const color = featureColors[feature.type];
+            const label = featureLabels[feature.type];
+
+            return (
+              <g key={feature.id}>
+                <title>
+                  {label}: X {feature.xMm}, Y {feature.yMm} mm, 크기{" "}
+                  {feature.widthMm} × {feature.lengthMm} mm
+                </title>
+
+                {feature.type === "SPRINKLER" ? (
+                  <ellipse
+                    cx={featureX + featureWidth / 2}
+                    cy={featureY + featureHeight / 2}
+                    rx={featureWidth / 2}
+                    ry={featureHeight / 2}
+                    fill={color}
+                    fillOpacity={0.15}
+                    stroke={color}
+                    strokeWidth={2}
+                  />
+                ) : (
+                  <rect
+                    x={featureX}
+                    y={featureY}
+                    width={featureWidth}
+                    height={featureHeight}
+                    fill={color}
+                    fillOpacity={0.15}
+                    stroke={color}
+                    strokeWidth={2}
+                    strokeDasharray={
+                      feature.type === "INSPECTION_HATCH" ? "5 3" : undefined
+                    }
+                  />
+                )}
+
+                {featureWidth >= 24 && featureHeight >= 18 && (
+                  <text
+                    x={featureX + featureWidth / 2}
+                    y={featureY + featureHeight / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={11}
+                    fill={color}
+                  >
+                    {features.findIndex((item) => item.id === feature.id) + 1}
+                  </text>
+                )}
+              </g>
+            );
+          })}
 
           {/* 가로 치수선 */}
           <line
@@ -156,6 +235,31 @@ export default function CeilingPreview({
             0보다 큰 숫자를 입력해 주세요.
           </p>
         </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-3">
+        {Object.entries(featureLabels).map(([type, label]) => (
+          <span
+            key={type}
+            className="flex items-center gap-1.5 text-xs text-slate-600"
+          >
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 rounded-sm border-2"
+              style={{
+                borderColor: featureColors[type as CeilingFeature["type"]],
+              }}
+            />
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {outsideCount > 0 && (
+        <p role="alert" className="mt-3 text-xs leading-5 text-red-700">
+          공간 크기 변경으로 요소 {outsideCount}개가 범위를 벗어났습니다. 해당
+          요소는 도면에서 숨겼습니다. 목록에서 삭제하고 다시 입력하세요.
+        </p>
       )}
 
       <p className="mt-3 text-xs leading-5 text-slate-500">

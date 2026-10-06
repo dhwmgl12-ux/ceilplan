@@ -64,4 +64,38 @@ export interface Project {
   siteInput: SiteInput;
   materialInput: MaterialInput;
   updatedAt: string;
+
+  features?: CeilingFeature[];
 }
+
+export type CeilingFeatureType =
+  | "AIR_CONDITIONER"
+  | "INSPECTION_HATCH"
+  | "SPRINKLER"
+  | "LIGHT_BOX";
+
+export interface CeilingFeature {
+  id: string;
+  type: CeilingFeatureType;
+
+  // 공간 왼쪽 상단을 기준으로 한 위치
+  xMm: number;
+  yMm: number;
+
+  widthMm: number;
+  lengthMm: number;
+}
+
+export const featureLabels: Record<CeilingFeatureType, string> = {
+  AIR_CONDITIONER: "시스템 에어컨",
+  INSPECTION_HATCH: "점검구",
+  SPRINKLER: "스프링클러",
+  LIGHT_BOX: "등박스",
+};
+
+export const featureColors: Record<CeilingFeatureType, string> = {
+  AIR_CONDITIONER: "#0284c7",
+  INSPECTION_HATCH: "#9333ea",
+  SPRINKLER: "#dc2626",
+  LIGHT_BOX: "#d97706",
+};

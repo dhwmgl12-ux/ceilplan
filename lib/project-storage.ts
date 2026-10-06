@@ -1,4 +1,10 @@
-import type { MaterialInput, Project, SiteInput } from "@/types/ceilplan";
+import {
+  featureLabels,
+  type CeilingFeature,
+  type MaterialInput,
+  type Project,
+  type SiteInput,
+} from "@/types/ceilplan";
 
 const STORAGE_KEY = "ceilplan.projects.v1";
 
@@ -40,8 +46,53 @@ function isProject(value: unknown): value is Project {
     typeof value.updatedAt === "string" &&
     Number.isFinite(Date.parse(value.updatedAt)) &&
     hasStringFields(value.siteInput, siteKeys) &&
-    hasStringFields(value.materialInput, materialKeys)
+    hasStringFields(value.materialInput, materialKeys) &&
+    isFeatureList(value.features)
   );
+}
+
+function isFeature(value: unknown): value is CeilingFeature {
+  if (!isRecord(value)) return false;
+
+  if (
+    typeof value.id !== "string" ||
+    value.id.trim() === "" ||
+    typeof value.type !== "string" ||
+    !Object.prototype.hasOwnProperty.call(featureLabels, value.type)
+  ) {
+    return false;
+  }
+
+  const keys = ["xMm", "yMm", "widthMm", "lengthMm"] as const;
+
+  for (const key of keys) {
+    const number = value[key];
+
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      return false;
+    }
+
+    if (key === "xMm" || key === "yMm") {
+      if (number < 0) return false;
+    } else if (number <= 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isFeatureList(value: unknown): boolean {
+  // 이전에 저장한 프로젝트는 요소 필드가 없어도 읽습니다.
+  if (value === undefined) return true;
+
+  if (!Array.isArray(value) || !value.every(isFeature)) {
+    return false;
+  }
+
+  const ids = new Set(value.map((feature) => feature.id));
+
+  return ids.size === value.length;
 }
 
 export function readProjects(): Project[] {

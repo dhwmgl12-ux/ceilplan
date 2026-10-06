@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { MaterialInput, Project, SiteInput } from "@/types/ceilplan";
+import type {
+  MaterialInput,
+  Project,
+  SiteInput,
+  CeilingFeature,
+} from "@/types/ceilplan";
 import { readProjects, saveProject } from "@/lib/project-storage";
 
 interface ProjectManagerProps {
@@ -9,11 +14,13 @@ interface ProjectManagerProps {
   onLoad: (project: Project) => void;
   onNew: () => void;
   onSaved: () => void;
+  features: CeilingFeature[];
 }
 
 export default function ProjectManager({
   siteInput,
   materialInput,
+  features,
   dirty,
   onLoad,
   onNew,
@@ -42,6 +49,7 @@ export default function ProjectManager({
         id: projectId ?? crypto.randomUUID(),
         siteInput: { ...siteInput },
         materialInput: { ...materialInput },
+        features: features.map((feature) => ({ ...feature })),
         updatedAt: new Date().toISOString(),
       };
 
