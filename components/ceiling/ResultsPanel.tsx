@@ -108,55 +108,45 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
             <h3 className="text-lg font-bold">상세 자재 산출 내역</h3>
 
             <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[700px] text-left text-xs">
+              <table className="w-full text-left text-xs">
                 <caption className="sr-only">
-                  기본 수량, Loss, 발주 올림 및 최종 발주 수량
+                  자재별 기본 수량, Loss 비율 및 최종 발주 수량
                 </caption>
 
                 <thead className="bg-blue-50 text-slate-600">
                   <tr>
-                    <th className="px-3 py-3">자재</th>
-                    <th className="px-3 py-3">이론 수량</th>
-                    <th className="px-3 py-3">Loss</th>
-                    <th className="px-3 py-3">Loss 증가량</th>
-                    <th className="px-3 py-3">Loss 적용 후</th>
-                    <th className="px-3 py-3">발주 올림분</th>
-                    <th className="px-3 py-3">최종 발주</th>
+                    <th scope="col" className="px-2 py-3">
+                      자재
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      기본 수량
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      Loss
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      최종 발주
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {result.materials.map((material) => (
                     <tr key={material.id} className="border-t border-slate-200">
-                      <th scope="row" className="px-3 py-3 font-medium">
+                      <th scope="row" className="px-2 py-3 font-medium">
                         {material.name}
                       </th>
 
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3 text-right tabular-nums">
                         {formatQuantity(material.theoreticalQuantity)}{" "}
                         {material.quantityUnit}
                       </td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3 text-right tabular-nums">
                         {formatQuantity(material.lossRate)}%
                       </td>
 
-                      <td className="px-3 py-3">
-                        +{formatQuantity(material.lossAmount)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3">
-                        {formatQuantity(material.quantityAfterLoss)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3">
-                        +{formatQuantity(material.roundingSurplus)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3 font-semibold text-blue-700">
+                      <td className="px-2 py-3 text-right font-semibold text-blue-700 tabular-nums">
                         {formatQuantity(material.orderQuantity)}{" "}
                         {material.purchaseUnit}
                       </td>
@@ -166,9 +156,57 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               </table>
             </div>
 
+            <details className="mt-4 rounded-lg border border-slate-200">
+              <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-blue-700">
+                Loss 증가량과 발주 올림분 확인
+              </summary>
+
+              <div className="space-y-3 border-t border-slate-100 p-3">
+                {result.materials.map((material) => (
+                  <div key={material.id} className="rounded-lg bg-slate-50 p-3">
+                    <h4 className="text-sm font-semibold">{material.name}</h4>
+
+                    <dl className="mt-3 space-y-2 text-xs">
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-slate-500">Loss 증가량</dt>
+                        <dd className="text-right tabular-nums">
+                          +{formatQuantity(material.lossAmount)}{" "}
+                          {material.quantityUnit}
+                        </dd>
+                      </div>
+
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-slate-500">Loss 적용 후</dt>
+                        <dd className="text-right tabular-nums">
+                          {formatQuantity(material.quantityAfterLoss)}{" "}
+                          {material.quantityUnit}
+                        </dd>
+                      </div>
+
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-slate-500">발주 올림분</dt>
+                        <dd className="text-right tabular-nums">
+                          +{formatQuantity(material.roundingSurplus)}{" "}
+                          {material.quantityUnit}
+                        </dd>
+                      </div>
+
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-slate-500">주문 총수량</dt>
+                        <dd className="text-right font-semibold tabular-nums">
+                          {formatQuantity(material.orderedQuantity)}{" "}
+                          {material.quantityUnit}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            </details>
+
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              현장 요소의 추가·공제·보강은 아직 반영하지 않습니다. 금속 자재의
-              Loss와 올림분은 길이(m), 최종 발주는 본수로 표시합니다.
+              현장 요소의 추가·공제·보강은 미반영입니다. 금속 자재의 기본 수량과
+              증가량은 m, 최종 발주는 본수입니다.
             </p>
           </div>
 
