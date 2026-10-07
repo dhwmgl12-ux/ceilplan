@@ -51,14 +51,21 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               계산 당시 공간 면적: {formatQuantity(result.areaM2)} ㎡
             </p>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1600px]:grid-cols-4">
               {result.materials.map((material) => (
-                <div key={material.id} className="rounded-lg bg-blue-50 p-3">
-                  <h3 className="text-sm font-semibold">{material.name}</h3>
+                <div
+                  key={material.id}
+                  className="min-w-0 rounded-lg border border-blue-100 bg-blue-50/50 p-3"
+                >
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    {material.name}
+                  </h3>
 
-                  <p className="mt-3 text-xl font-bold text-blue-700">
+                  <p className="mt-3 break-words text-xl font-bold text-slate-900">
                     {formatQuantity(material.orderQuantity)}{" "}
-                    {material.purchaseUnit}
+                    <span className="text-sm font-medium">
+                      {material.purchaseUnit}
+                    </span>
                   </p>
 
                   {material.quantityUnit === "m" && (
@@ -67,11 +74,29 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
                     </p>
                   )}
 
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2 break-words text-xs text-slate-600">
                     {formatMoney(material.estimatedCost)}
                   </p>
                 </div>
               ))}
+
+              <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <h3 className="text-sm font-semibold text-emerald-800">
+                  합계 예상 금액
+                </h3>
+
+                <p className="mt-3 break-words text-xl font-bold text-emerald-700">
+                  {result.totalEstimatedCost === null
+                    ? "단가 입력 필요"
+                    : formatMoney(result.totalEstimatedCost)}
+                </p>
+
+                <p className="mt-2 text-xs leading-5 text-emerald-800">
+                  {result.totalEstimatedCost === null
+                    ? "모든 자재의 단가를 입력하세요."
+                    : "자재비 기준 · VAT 별도"}
+                </p>
+              </div>
             </div>
           </>
         )}
@@ -148,7 +173,7 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-bold">예상 발주 금액</h3>
+            <h3 className="text-lg font-bold">자재별 금액 계산 내역</h3>
 
             <p className="mt-1 text-xs text-slate-500">
               자재비 기준 · VAT, 운송비, 인건비 제외
@@ -180,24 +205,6 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
                 </div>
               ))}
             </dl>
-
-            <div className="mt-5 rounded-lg bg-emerald-50 p-4">
-              <p className="text-sm font-semibold text-emerald-800">
-                합계 예상 금액
-              </p>
-
-              <p className="mt-2 text-2xl font-bold text-emerald-700">
-                {result.totalEstimatedCost === null
-                  ? "단가 입력 필요"
-                  : formatMoney(result.totalEstimatedCost)}
-              </p>
-
-              {result.totalEstimatedCost === null && (
-                <p className="mt-2 text-xs text-emerald-800">
-                  모든 자재의 단가를 입력해야 합계를 계산할 수 있습니다.
-                </p>
-              )}
-            </div>
           </div>
         </>
       )}
