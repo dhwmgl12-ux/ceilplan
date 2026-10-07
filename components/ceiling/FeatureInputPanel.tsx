@@ -92,10 +92,7 @@ export default function FeatureInputPanel({
   }
 
   return (
-    <section
-      aria-labelledby="feature-input-title"
-      className="rounded-xl border border-slate-200 bg-white p-5"
-    >
+    <section aria-labelledby="feature-input-title" className="p-5">
       <h2 id="feature-input-title" className="text-lg font-bold">
         현장 요소
       </h2>

@@ -196,16 +196,6 @@ export default function CeilingWorkspace() {
               onChange={handleMaterialChange}
             />
 
-            <FeatureInputPanel
-              // 프로젝트 전환 시 작성 중인 요소 입력을 초기화합니다.
-              key={featureFormKey}
-              widthMm={inputs.widthMm}
-              lengthMm={inputs.lengthMm}
-              features={features}
-              onAdd={handleAddFeature}
-              onDelete={handleDeleteFeature}
-            />
-
             <div className="rounded-xl border border-slate-200 bg-white p-5">
               {errors.length > 0 && (
                 <div
@@ -244,6 +234,30 @@ export default function CeilingWorkspace() {
                     : "입력 후 계산 버튼을 눌러주세요."}
               </p>
             </div>
+            <details
+              key={featureFormKey}
+              className="group rounded-xl border border-slate-200 bg-white"
+            >
+              <summary className="cursor-pointer rounded-xl px-5 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                <span className="ml-1 text-sm font-semibold">
+                  현장 요소 입력
+                </span>
+
+                <span className="ml-2 text-xs text-slate-500">
+                  {features.length}개
+                </span>
+              </summary>
+
+              <div className="border-t border-slate-100">
+                <FeatureInputPanel
+                  widthMm={inputs.widthMm}
+                  lengthMm={inputs.lengthMm}
+                  features={features}
+                  onAdd={handleAddFeature}
+                  onDelete={handleDeleteFeature}
+                />
+              </div>
+            </details>
           </div>
 
           <CeilingPreview
