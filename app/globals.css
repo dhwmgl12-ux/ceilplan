@@ -12,3 +12,46 @@ input:focus-visible {
   outline: 3px solid #93c5fd;
   outline-offset: 3px;
 }
+
+@layer components {
+  .cp-card {
+    @apply min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5;
+  }
+
+  .cp-title {
+    @apply text-base font-bold tracking-tight text-slate-900;
+  }
+
+  .cp-input {
+    @apply h-11 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900;
+  }
+
+  .cp-button-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700;
+  }
+
+  .cp-button-secondary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50;
+  }
+}
+
+button:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+#projects,
+#inputs,
+#preview,
+#results {
+  scroll-margin-top: 6rem;
+}

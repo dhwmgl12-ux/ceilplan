@@ -61,7 +61,7 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
                     {material.name}
                   </h3>
 
-                  <p className="mt-3 break-words text-xl font-bold text-slate-900">
+                  <p className="mt-3 break-words text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
                     {formatQuantity(material.orderQuantity)}{" "}
                     <span className="text-sm font-medium">
                       {material.purchaseUnit}
@@ -81,7 +81,7 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               ))}
 
               <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <h3 className="text-sm font-semibold text-emerald-800">
+                <h3 className="mt-3 break-words text-2xl font-bold tracking-tight text-emerald-700 tabular-nums">
                   합계 예상 금액
                 </h3>
 

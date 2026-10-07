@@ -26,7 +26,7 @@ function NumberField({
     <label className="block text-sm font-medium">
       {label}
 
-      <div className="mt-2 flex items-center rounded-lg border border-slate-200">
+      <div className="mt-2 flex min-h-11 items-center rounded-lg border border-slate-200 bg-white">
         <input
           type="number"
           min={min}
@@ -34,7 +34,7 @@ function NumberField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="직접 입력"
-          className="min-w-0 w-full rounded-lg px-3 py-2 text-sm"
+          className="h-11 min-w-0 w-full rounded-lg bg-transparent px-3 text-sm text-slate-900"
         />
 
         <span className="shrink-0 pr-3 text-xs text-slate-500">{unit}</span>
