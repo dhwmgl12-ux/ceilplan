@@ -47,6 +47,28 @@ export default function CeilingWorkspace() {
   const [features, setFeatures] = useState<CeilingFeature[]>([]);
   const [featureFormKey, setFeatureFormKey] = useState(0);
 
+  const width = Number(inputs.widthMm);
+  const length = Number(inputs.lengthMm);
+
+  const hasValidDimensions =
+    inputs.widthMm.trim() !== "" &&
+    inputs.lengthMm.trim() !== "" &&
+    Number.isFinite(width) &&
+    Number.isFinite(length) &&
+    width > 0 &&
+    length > 0;
+
+  const calculatedArea = hasValidDimensions
+    ? (width / 1000) * (length / 1000)
+    : null;
+
+  const areaM2 =
+    calculatedArea !== null &&
+    Number.isFinite(calculatedArea) &&
+    calculatedArea > 0
+      ? calculatedArea
+      : null;
+
   function handleInputChange(field: keyof SiteInput, value: string) {
     setInputs((previous) => ({
       ...previous,
@@ -152,18 +174,19 @@ export default function CeilingWorkspace() {
 
   return (
     <div className="min-w-0">
-      <ProjectHeader projectName={inputs.name} />
-
-      <main className="p-4 sm:p-6">
+      <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
         <ProjectManager
           siteInput={inputs}
           materialInput={materialInputs}
+          features={features}
           dirty={dirty}
           onLoad={handleLoadProject}
           onNew={handleNewProject}
           onSaved={() => setDirty(false)}
-          features={features}
         />
+      </ProjectHeader>
+
+      <main className="p-4 sm:p-6">
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div className="min-w-0 space-y-4">
             <InputPanel inputs={inputs} onChange={handleInputChange} />

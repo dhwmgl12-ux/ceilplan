@@ -120,21 +120,26 @@ export default function ProjectManager({
   return (
     <section
       aria-labelledby="project-manager-title"
-      className="mb-4 rounded-xl border border-slate-200 bg-white p-5"
+      className="mt-4 border-t border-slate-100 pt-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="project-manager-title" className="text-sm font-semibold">
+          <h2 id="project-manager-title" className="sr-only">
             프로젝트 관리
           </h2>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-xs leading-5 text-slate-500">
             {savedAt
               ? `마지막 저장: ${new Date(savedAt).toLocaleString("ko-KR", {
                   timeZone: "Asia/Seoul",
                 })}`
               : "아직 저장하지 않았습니다."}
-            {dirty && " · 저장하지 않은 변경사항"}
+
+            {dirty && (
+              <span className="ml-2 font-medium text-amber-700">
+                · 저장하지 않은 변경사항
+              </span>
+            )}
           </p>
         </div>
 
@@ -179,10 +184,14 @@ export default function ProjectManager({
         </p>
       )}
 
-      <p className="mt-3 text-xs leading-5 text-slate-500">
-        이 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저
-        데이터를 삭제하면 저장 내용도 사라집니다.
-      </p>
+      <details className="mt-2 text-xs text-slate-500">
+        <summary className="cursor-pointer">브라우저 저장 안내</summary>
+
+        <p className="mt-2 leading-5">
+          이 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저
+          데이터를 삭제하면 저장 내용도 사라집니다.
+        </p>
+      </details>
 
       <div id="project-list" hidden={!listOpen}>
         <div className="mt-4 border-t border-slate-200 pt-4">
