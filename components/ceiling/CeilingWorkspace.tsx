@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   CalculationResult,
   CeilingFeature,
@@ -15,7 +15,8 @@ import InputPanel from "./InputPanel";
 import MaterialInputPanel from "./MaterialInputPanel";
 import CeilingPreview from "./CeilingPreview";
 import ResultsPanel from "./ResultsPanel";
-import ProjectManager from "./ProjectManager";
+import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
+import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
 
 export default function CeilingWorkspace() {
@@ -172,10 +173,31 @@ export default function CeilingWorkspace() {
     setDirty(true);
   }
 
+  const projectManagerRef = useRef<ProjectManagerHandle>(null);
+
+  const [activeMenu, setActiveMenu] = useState<SidebarMenu>("dashboard");
+
+  function handleNavigate(menu: SidebarMenu) {
+    setActiveMenu(menu);
+
+    if (menu === "projects") {
+      projectManagerRef.current?.openList();
+    }
+
+    const targetId = menu === "dashboard" ? "dashboard" : menu;
+
+    document.getElementById(targetId)?.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+  }
+
   return (
     <div className="min-w-0">
+      <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
       <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
         <ProjectManager
+          ref={projectManagerRef}
           siteInput={inputs}
           materialInput={materialInputs}
           features={features}

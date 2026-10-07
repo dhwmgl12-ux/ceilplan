@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import type {
   MaterialInput,
   Project,
@@ -6,6 +6,10 @@ import type {
   CeilingFeature,
 } from "@/types/ceilplan";
 import { readProjects, saveProject } from "@/lib/project-storage";
+
+export interface ProjectManagerHandle {
+  openList: () => void;
+}
 
 interface ProjectManagerProps {
   siteInput: SiteInput;
@@ -15,9 +19,11 @@ interface ProjectManagerProps {
   onNew: () => void;
   onSaved: () => void;
   features: CeilingFeature[];
+  ref?: Ref<ProjectManagerHandle>;
 }
 
 export default function ProjectManager({
+  ref,
   siteInput,
   materialInput,
   features,
@@ -86,6 +92,10 @@ export default function ProjectManager({
     }
   }
 
+  useImperativeHandle(ref, () => ({
+    openList: handleOpenList,
+  }));
+
   function canReplaceInputs() {
     return (
       !dirty ||
@@ -119,6 +129,7 @@ export default function ProjectManager({
 
   return (
     <section
+      id="projects"
       aria-labelledby="project-manager-title"
       className="mt-4 border-t border-slate-100 pt-4"
     >
