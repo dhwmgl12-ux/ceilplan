@@ -107,7 +107,12 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <h3 className="text-lg font-bold">상세 자재 산출 내역</h3>
 
-            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+            <div
+              role="region"
+              aria-label="자재 산출 표"
+              tabIndex={0}
+              className="mt-4 overflow-x-auto rounded-lg border border-slate-200"
+            >
               <table className="w-full text-left text-xs">
                 <caption className="sr-only">
                   자재별 기본 수량, Loss 비율 및 최종 발주 수량

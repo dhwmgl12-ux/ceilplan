@@ -103,6 +103,7 @@ export default function CeilingWorkspace() {
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
+      moveAfterCalculation("inputs");
       return;
     }
 
@@ -112,10 +113,14 @@ export default function CeilingWorkspace() {
       setResult(nextResult);
       setErrors([]);
       setStale(false);
+
+      moveAfterCalculation("results");
     } catch (error) {
       setErrors([
         error instanceof Error ? error.message : "계산 중 오류가 발생했습니다.",
       ]);
+
+      moveAfterCalculation("inputs");
     }
   }
 
@@ -192,6 +197,24 @@ export default function CeilingWorkspace() {
     });
   }
 
+  function moveToSection(id: "inputs" | "preview" | "results") {
+    setActiveMenu(id === "results" ? "results" : "dashboard");
+
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+  }
+
+  function moveAfterCalculation(id: "inputs" | "results") {
+    if (!window.matchMedia("(max-width: 1279px)").matches) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      moveToSection(id);
+    });
+  }
   return (
     <div className="min-w-0">
       <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
@@ -208,9 +231,38 @@ export default function CeilingWorkspace() {
         />
       </ProjectHeader>
 
-      <main className="p-4 sm:p-6">
+      <nav
+        aria-label="작업 영역 바로가기"
+        className="sticky top-0 z-10 grid grid-cols-3 gap-2 border-b border-slate-200 bg-white px-4 py-2 min-[1280px]:hidden"
+      >
+        <button
+          type="button"
+          onClick={() => moveToSection("inputs")}
+          className="cp-button-secondary"
+        >
+          입력
+        </button>
+
+        <button
+          type="button"
+          onClick={() => moveToSection("preview")}
+          className="cp-button-secondary"
+        >
+          미리보기
+        </button>
+
+        <button
+          type="button"
+          onClick={() => moveToSection("results")}
+          className="cp-button-secondary"
+        >
+          결과
+        </button>
+      </nav>
+
+      <main className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6">
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
-          <div className="min-w-0 space-y-4">
+          <div id="inputs" className="min-w-0 space-y-4">
             <InputPanel inputs={inputs} onChange={handleInputChange} />
 
             <MaterialInputPanel
@@ -282,15 +334,36 @@ export default function CeilingWorkspace() {
             </details>
           </div>
 
-          <CeilingPreview
-            widthMm={inputs.widthMm}
-            lengthMm={inputs.lengthMm}
-            features={features}
-          />
+          <div id="preview" className="min-w-0">
+            <CeilingPreview
+              widthMm={inputs.widthMm}
+              lengthMm={inputs.lengthMm}
+              features={features}
+            />
+          </div>
 
           <ResultsPanel result={result} stale={stale} />
         </div>
       </main>
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[1280px]:hidden">
+        <div className="flex items-center gap-3">
+          <p className="min-w-0 flex-1 text-xs leading-5 text-slate-500">
+            {stale
+              ? "입력이 변경되어 재계산이 필요합니다."
+              : result
+                ? "계산 결과를 확인하세요."
+                : "조건을 입력하고 계산하세요."}
+          </p>
+
+          <button
+            type="button"
+            onClick={handleCalculate}
+            className="cp-button-primary shrink-0"
+          >
+            {stale ? "다시 계산" : "계산하기"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
