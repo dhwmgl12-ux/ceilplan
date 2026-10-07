@@ -248,22 +248,113 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="text-lg font-bold">계산 근거</h3>
+        <h3 className="text-lg font-bold">계산 근거 및 산출 기준</h3>
 
-        <ol className="mt-4 space-y-3 text-xs leading-6 text-slate-600">
-          <li>1. 공간 면적: 가로(mm) × 세로(mm) ÷ 1,000,000</li>
-          <li>2. 석고보드: 공간 면적 ÷ 보드 1장 면적 × 겹수</li>
-          <li>3. M-BAR·캐링: 공간 면적 ÷ 입력 간격(m)</li>
-          <li>4. Loss: 이론 수량 × (1 + 입력 Loss ÷ 100)</li>
-          <li>
-            5. 석고보드는 장수 올림, 금속 자재는 정척 길이로 나눈 본수를 올림
-          </li>
-          <li>6. 예상 금액: 발주 장수·본수 × 해당 구매 단위의 단가</li>
+        <ol className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {[
+            {
+              title: "기본 물량",
+              description:
+                "공간 면적과 보드 규격·겹수, 골조 간격으로 이론 필요량을 계산합니다.",
+            },
+            {
+              title: "Loss 적용",
+              description:
+                "입력한 석고·금속 Loss를 적용하고 증가량을 별도로 표시합니다.",
+            },
+            {
+              title: "구매 단위",
+              description:
+                "석고는 장 단위, 금속은 입력한 정척 길이의 본 단위로 올림합니다.",
+            },
+            {
+              title: "예상 금액",
+              description:
+                "최종 발주 수량에 해당 구매 단위의 사용자 단가를 적용합니다.",
+            },
+          ].map((step, index) => (
+            <li key={step.title}>
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <span
+                  aria-hidden="true"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-700"
+                >
+                  {index + 1}
+                </span>
+
+                {step.title}
+              </h4>
+
+              <p className="mt-2 text-xs leading-6 text-slate-500">
+                {step.description}
+              </p>
+            </li>
+          ))}
         </ol>
 
+        <details className="mt-4 rounded-lg border border-slate-200">
+          <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-blue-700">
+            자세한 계산 공식 보기
+          </summary>
+
+          <dl className="space-y-4 border-t border-slate-100 p-3 text-xs leading-6">
+            <div>
+              <dt className="font-semibold">공간 면적</dt>
+              <dd className="text-slate-600">
+                가로(mm) × 세로(mm) ÷ 1,000,000
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">석고보드 이론 장수</dt>
+              <dd className="text-slate-600">
+                공간 면적(㎡) ÷ 보드 1장 면적(㎡) × 겹수
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">M-BAR·캐링 이론 총길이</dt>
+              <dd className="text-slate-600">공간 면적(㎡) ÷ 입력 간격(m)</dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">Loss 적용 수량</dt>
+              <dd className="text-slate-600">
+                이론 수량 × (1 + Loss 비율 ÷ 100)
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">발주 수량</dt>
+              <dd className="text-slate-600">
+                석고: Loss 적용 장수 올림
+                <br />
+                금속: Loss 적용 길이(m) ÷ 정척 길이(m)의 결과 올림
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">발주 올림 증가량</dt>
+              <dd className="text-slate-600">
+                주문 총수량 − Loss 적용 수량
+                <br />
+                금속 주문 총길이 = 발주 본수 × 정척 길이
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">예상 금액</dt>
+              <dd className="text-slate-600">
+                발주 장수·본수 × 해당 구매 단위의 단가
+              </dd>
+            </div>
+          </dl>
+        </details>
+
         <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-6 text-slate-500">
-          면적 기반 예상값입니다. 실제 골조 배치, 절단·잔재, 현장 요소 보강 및
-          구조 안전 판단은 포함하지 않습니다.
+          면적 기반 예상값입니다. 현장 요소는 시각적으로만 표시하며,
+          추가·공제·보강 수량은 미반영입니다. 실제 골조 배치와 절단·잔재, 구조
+          안전 판단은 포함하지 않습니다.
         </p>
       </div>
     </section>
