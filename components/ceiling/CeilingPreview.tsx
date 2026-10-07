@@ -102,27 +102,55 @@ export default function CeilingPreview({
             const featureWidth = feature.widthMm * scale;
             const featureHeight = feature.lengthMm * scale;
 
+            const centerX = featureX + featureWidth / 2;
+            const centerY = featureY + featureHeight / 2;
+
             const color = featureColors[feature.type];
             const label = featureLabels[feature.type];
+            const number =
+              features.findIndex((item) => item.id === feature.id) + 1;
+
+            const hasRoomForDetails = featureWidth >= 24 && featureHeight >= 18;
 
             return (
               <g key={feature.id}>
                 <title>
-                  {label}: X {feature.xMm}, Y {feature.yMm} mm, 크기{" "}
+                  {number}번 {label}: X {feature.xMm}, Y {feature.yMm} mm, 크기{" "}
                   {feature.widthMm} × {feature.lengthMm} mm
                 </title>
 
                 {feature.type === "SPRINKLER" ? (
-                  <ellipse
-                    cx={featureX + featureWidth / 2}
-                    cy={featureY + featureHeight / 2}
-                    rx={featureWidth / 2}
-                    ry={featureHeight / 2}
-                    fill={color}
-                    fillOpacity={0.15}
-                    stroke={color}
-                    strokeWidth={2}
-                  />
+                  <>
+                    <ellipse
+                      cx={centerX}
+                      cy={centerY}
+                      rx={featureWidth / 2}
+                      ry={featureHeight / 2}
+                      fill={color}
+                      fillOpacity={0.1}
+                      stroke={color}
+                      strokeWidth={2}
+                    />
+
+                    {hasRoomForDetails && (
+                      <>
+                        <line
+                          x1={centerX - featureWidth * 0.2}
+                          y1={centerY}
+                          x2={centerX + featureWidth * 0.2}
+                          y2={centerY}
+                          stroke={color}
+                        />
+                        <line
+                          x1={centerX}
+                          y1={centerY - featureHeight * 0.2}
+                          x2={centerX}
+                          y2={centerY + featureHeight * 0.2}
+                          stroke={color}
+                        />
+                      </>
+                    )}
+                  </>
                 ) : (
                   <rect
                     x={featureX}
@@ -130,7 +158,7 @@ export default function CeilingPreview({
                     width={featureWidth}
                     height={featureHeight}
                     fill={color}
-                    fillOpacity={0.15}
+                    fillOpacity={0.12}
                     stroke={color}
                     strokeWidth={2}
                     strokeDasharray={
@@ -139,17 +167,56 @@ export default function CeilingPreview({
                   />
                 )}
 
-                {featureWidth >= 24 && featureHeight >= 18 && (
-                  <text
-                    x={featureX + featureWidth / 2}
-                    y={featureY + featureHeight / 2}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize={11}
-                    fill={color}
-                  >
-                    {features.findIndex((item) => item.id === feature.id) + 1}
-                  </text>
+                {feature.type === "AIR_CONDITIONER" && hasRoomForDetails && (
+                  <>
+                    {[0.3, 0.5, 0.7].map((ratio) => (
+                      <line
+                        key={ratio}
+                        x1={featureX + featureWidth * 0.2}
+                        y1={featureY + featureHeight * ratio}
+                        x2={featureX + featureWidth * 0.8}
+                        y2={featureY + featureHeight * ratio}
+                        stroke={color}
+                        strokeWidth={1.5}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {feature.type === "LIGHT_BOX" && hasRoomForDetails && (
+                  <rect
+                    x={featureX + featureWidth * 0.12}
+                    y={featureY + featureHeight * 0.2}
+                    width={featureWidth * 0.76}
+                    height={featureHeight * 0.6}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={1}
+                  />
+                )}
+
+                {hasRoomForDetails && (
+                  <>
+                    <rect
+                      x={featureX + 1}
+                      y={featureY + 1}
+                      width={15}
+                      height={14}
+                      fill="white"
+                      fillOpacity={0.9}
+                    />
+                    <text
+                      x={featureX + 8.5}
+                      y={featureY + 8}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={10}
+                      fontWeight="bold"
+                      fill={color}
+                    >
+                      {number}
+                    </text>
+                  </>
                 )}
               </g>
             );
@@ -237,23 +304,36 @@ export default function CeilingPreview({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-3">
-        {Object.entries(featureLabels).map(([type, label]) => (
-          <span
-            key={type}
-            className="flex items-center gap-1.5 text-xs text-slate-600"
-          >
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+        {Object.entries(featureLabels).map(([type, label]) => {
+          const count = features.filter(
+            (feature) => feature.type === type,
+          ).length;
+
+          return (
             <span
-              aria-hidden="true"
-              className="h-3 w-3 rounded-sm border-2"
-              style={{
-                borderColor: featureColors[type as CeilingFeature["type"]],
-              }}
-            />
-            {label}
-          </span>
-        ))}
+              key={type}
+              className="flex items-center gap-1.5 text-xs text-slate-600"
+            >
+              <span
+                aria-hidden="true"
+                className="h-3 w-3 border-2"
+                style={{
+                  borderColor: featureColors[type as CeilingFeature["type"]],
+                  borderStyle: type === "INSPECTION_HATCH" ? "dashed" : "solid",
+                  borderRadius: type === "SPRINKLER" ? "50%" : "2px",
+                }}
+              />
+              {label} × {count}
+            </span>
+          );
+        })}
       </div>
+
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        도면 번호는 현장 요소 목록과 연결됩니다. 개수는 공간 밖 요소도 포함한
+        등록 수입니다.
+      </p>
 
       {outsideCount > 0 && (
         <p role="alert" className="mt-3 text-xs leading-5 text-red-700">
