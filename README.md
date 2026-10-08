@@ -1,11 +1,15 @@
 # CeilPlan
 
-현장 조건과 사용자 입력을 바탕으로 천장 자재 물량을 정리하는 개인 포트폴리오 프로젝트입니다.
+현장 조건과 사용자 입력을 바탕으로
+천장 자재의 예상 필요 수량과 발주 금액을 계산하는
+개인 포트폴리오 프로젝트입니다.
+
 Next.js App Router, TypeScript, Tailwind를 사용합니다.
 
 ## 실행
 
 ```sh
+npm install
 npm run dev
 ```
 
