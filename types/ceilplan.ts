@@ -23,49 +23,28 @@ export interface MaterialInput {
   carryingUnitPrice: string;
 }
 
-export interface MaterialCalculation {
-  id: "BOARD" | "MBAR" | "CARRYING";
-  name: string;
+// 자재를 연결할 때 사용하는 공통 ID입니다.
+export type MaterialId = "BOARD" | "MBAR" | "CARRYING";
 
-  // 기본 물량과 Loss는 이 단위를 사용합니다.
-  quantityUnit: "장" | "m";
-  theoreticalQuantity: number;
-  quantityBeforeLoss: number;
+export type SourceType =
+  | "OFFICIAL_STANDARD"
+  | "PROJECT_SPEC"
+  | "MANUFACTURER"
+  | "USER_INPUT";
 
-  // 현장 요소 계산은 아직 지원하지 않습니다.
-  featureAdjustment: null;
+export type SourceStatus = "CONFIRMED" | "NEEDS_REVIEW" | "INPUT_BASED";
 
-  lossRate: number;
-  lossAmount: number;
-  quantityAfterLoss: number;
+export interface RuleSource {
+  sourceType: SourceType;
+  status: SourceStatus;
 
-  // 석고는 장, 금속은 본으로 발주합니다.
-  purchaseUnit: "장" | "본";
-  orderQuantity: number;
+  // 미확인 또는 해당 없음은 null로 기록합니다.
+  documentName: string | null;
+  clause: string | null;
+  version: string | null;
+  sourceUrl: string | null;
 
-  // 주문한 총 장수 또는 총길이
-  orderedQuantity: number;
-  roundingSurplus: number;
-
-  unitPrice: number | null;
-  estimatedCost: number | null;
-}
-
-export interface CalculationResult {
-  areaM2: number;
-  materials: MaterialCalculation[];
-
-  // 단가 미입력이 하나라도 있으면 합계는 미완성입니다.
-  totalEstimatedCost: number | null;
-}
-
-export interface Project {
-  id: string;
-  siteInput: SiteInput;
-  materialInput: MaterialInput;
-  updatedAt: string;
-
-  features?: CeilingFeature[];
+  applicationConditions: string;
 }
 
 export type CeilingFeatureType =
@@ -78,12 +57,162 @@ export interface CeilingFeature {
   id: string;
   type: CeilingFeatureType;
 
-  // 공간 왼쪽 상단을 기준으로 한 위치
+  // 공간 왼쪽 상단을 기준으로 한 위치, 단위 mm
   xMm: number;
   yMm: number;
 
   widthMm: number;
   lengthMm: number;
+}
+
+export type AdjustmentType = "ADD" | "DEDUCT";
+
+interface AdjustmentBase {
+  id: string;
+  featureId: string;
+
+  // 양수로 입력합니다. 추가·공제 방향은 adjustmentType으로 구분합니다.
+  quantity: number;
+  adjustmentType: AdjustmentType;
+  memo: string;
+
+  // 현재 수동 조정값의 출처는 사용자 입력으로 제한합니다.
+  sourceType: "USER_INPUT";
+  status: "INPUT_BASED";
+}
+
+// 석고보드는 공간 면적을 입력하며 계산 시 겹수를 적용합니다.
+export interface BoardAdjustment extends AdjustmentBase {
+  materialId: "BOARD";
+  unit: "㎡";
+}
+
+// 금속은 해당 자재의 연장을 입력합니다.
+export interface MetalAdjustment extends AdjustmentBase {
+  materialId: "MBAR" | "CARRYING";
+  unit: "m";
+}
+
+// 자재와 단위의 잘못된 조합을 타입 수준에서 막습니다.
+export type Adjustment = BoardAdjustment | MetalAdjustment;
+
+// 계산 당시 조정값과 단위 변환 결과를 함께 보관합니다.
+export interface AppliedAdjustment {
+  adjustment: Adjustment;
+
+  featureType: CeilingFeatureType;
+
+  // 석고보드는 장, 금속은 m로 변환한 양수 수량입니다.
+  convertedQuantity: number;
+  quantityUnit: "장" | "m";
+}
+
+export interface FeatureAdjustmentSummary {
+  // 두 합계는 모두 0 이상의 값입니다.
+  addedQuantity: number;
+  deductedQuantity: number;
+
+  // 추가 합계 - 공제 합계
+  netQuantity: number;
+
+  // 자재의 이론 물량과 같은 단위입니다.
+  quantityUnit: "장" | "m";
+
+  items: AppliedAdjustment[];
+}
+
+export interface MaterialCalculation {
+  id: MaterialId;
+  name: string;
+
+  quantityUnit: "장" | "m";
+
+  // 현장 조정 전 기본 이론 물량
+  theoreticalQuantity: number;
+
+  // 기본 이론 물량 + 추가 - 공제
+  quantityBeforeLoss: number;
+
+  // null: 조정 계산 미지원
+  // 합계가 0이고 items가 빈 배열: 조정 계산 지원, 입력 없음
+  featureAdjustment: FeatureAdjustmentSummary | null;
+
+  lossRate: number;
+  lossAmount: number;
+  quantityAfterLoss: number;
+
+  purchaseUnit: "장" | "본";
+  orderQuantity: number;
+
+  // 발주한 총 장수 또는 총길이
+  orderedQuantity: number;
+  roundingSurplus: number;
+
+  unitPrice: number | null;
+  estimatedCost: number | null;
+}
+
+export interface CalculationResult {
+  // 개구부 공제 전 직사각형 전체 면적
+  areaM2: number;
+
+  materials: MaterialCalculation[];
+
+  // 단가 미입력이 하나라도 있으면 null
+  totalEstimatedCost: number | null;
+}
+
+// 저장 형식 버전과 별개로 계산 정책의 버전을 기록합니다.
+export type CalculationRuleVersion = string;
+
+export interface CalculationSnapshot {
+  calculatedAt: string;
+  calculationRuleVersion: CalculationRuleVersion;
+
+  // 현재 입력에 대한 참조가 아닌 계산 당시 복사본을 보관합니다.
+  siteInput: SiteInput;
+  materialInput: MaterialInput;
+  features: CeilingFeature[];
+  adjustments: Adjustment[];
+
+  result: CalculationResult;
+}
+
+// 기존 화면과 저장 코드가 계속 사용할 프로젝트 타입입니다.
+export interface Project {
+  id: string;
+  siteInput: SiteInput;
+  materialInput: MaterialInput;
+  updatedAt: string;
+
+  // 이전 데이터 및 단계적 구현과의 호환을 위해 선택 항목입니다.
+  features?: CeilingFeature[];
+  adjustments?: Adjustment[];
+  snapshot?: CalculationSnapshot | null;
+}
+
+// 앞으로 새 저장 형식으로 기록할 프로젝트입니다.
+export interface StoredProjectV2 extends Project {
+  features: CeilingFeature[];
+  adjustments: Adjustment[];
+  snapshot: CalculationSnapshot | null;
+}
+
+// JSON 및 브라우저 저장 데이터의 형식 버전입니다.
+// 공식 기준의 버전을 의미하지 않습니다.
+export const PROJECT_SCHEMA_VERSION = 2 as const;
+
+// 브라우저에 저장할 프로젝트 목록의 새 형식
+export interface ProjectStorageV2 {
+  schemaVersion: typeof PROJECT_SCHEMA_VERSION;
+  projects: StoredProjectV2[];
+}
+
+// 프로젝트 1개를 백업할 JSON 파일의 새 형식
+export interface ProjectExportV2 {
+  schemaVersion: typeof PROJECT_SCHEMA_VERSION;
+  exportedAt: string;
+  project: StoredProjectV2;
 }
 
 export const featureLabels: Record<CeilingFeatureType, string> = {
