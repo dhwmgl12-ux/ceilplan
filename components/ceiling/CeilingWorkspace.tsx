@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Adjustment,
   CalculationSnapshot,
@@ -55,6 +55,39 @@ export default function CeilingWorkspace() {
   const [features, setFeatures] = useState<CeilingFeature[]>([]);
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [featureFormKey, setFeatureFormKey] = useState(0);
+
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dirty) return;
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [dirty]);
+
+  useEffect(() => {
+    if (errors.length === 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      const element = errorSummaryRef.current;
+
+      element?.focus({ preventScroll: true });
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [errors]);
 
   const width = Number(inputs.widthMm);
   const length = Number(inputs.lengthMm);
@@ -119,7 +152,6 @@ export default function CeilingWorkspace() {
         setStale(true);
       }
 
-      moveAfterCalculation("inputs");
       return;
     }
 
@@ -155,6 +187,7 @@ export default function CeilingWorkspace() {
       setSnapshot(nextSnapshot);
       setErrors([]);
       setStale(false);
+      setDirty(true);
 
       moveAfterCalculation("results");
     } catch (error) {
@@ -171,7 +204,7 @@ export default function CeilingWorkspace() {
     }
   }
 
-  function handleLoadProject(project: Project) {
+  function handleLoadProject(project: Project, source: "storage" | "import") {
     setInputs({ ...project.siteInput });
     setMaterialInputs({ ...project.materialInput });
     setFeatures((project.features ?? []).map((feature) => ({ ...feature })));
@@ -189,7 +222,7 @@ export default function CeilingWorkspace() {
     setStale(Boolean(project.snapshot));
 
     // 불러온 데이터를 덮어쓰기 전에 확인받도록 보수적으로 표시합니다.
-    setDirty(true);
+    setDirty(source === "import");
   }
 
   function handleNewProject() {
@@ -313,6 +346,13 @@ export default function CeilingWorkspace() {
   }
   return (
     <div className="min-w-0">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-blue-700 focus:shadow-lg"
+      >
+        본문으로 바로가기
+      </a>
+
       <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
       <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
         <ProjectManager
@@ -358,7 +398,11 @@ export default function CeilingWorkspace() {
         </button>
       </nav>
 
-      <main className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6"
+      >
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div id="inputs" className="min-w-0 space-y-4">
             <InputPanel inputs={inputs} onChange={handleInputChange} />
@@ -371,11 +415,17 @@ export default function CeilingWorkspace() {
             <div className="cp-card">
               {errors.length > 0 && (
                 <div
+                  ref={errorSummaryRef}
                   id="calculation-errors"
                   role="alert"
+                  tabIndex={-1}
+                  aria-labelledby="calculation-errors-title"
                   className="mb-4 rounded-lg bg-red-50 p-3"
                 >
-                  <p className="text-sm font-semibold text-red-800">
+                  <p
+                    id="calculation-errors-title"
+                    className="text-sm font-semibold text-red-800"
+                  >
                     입력값을 확인해 주세요.
                   </p>
 

@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -28,7 +29,7 @@ interface ProjectManagerProps {
   siteInput: SiteInput;
   materialInput: MaterialInput;
   dirty: boolean;
-  onLoad: (project: Project) => void;
+  onLoad: (project: Project, source: "storage" | "import") => void;
   onNew: () => void;
   onSaved: () => void;
   features: CeilingFeature[];
@@ -59,6 +60,22 @@ export default function ProjectManager({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+
+  const importContext = JSON.stringify({
+    projectId,
+    siteInput,
+    materialInput,
+    features,
+    adjustments,
+    snapshot,
+    dirty,
+  });
+
+  const latestImportContextRef = useRef(importContext);
+
+  useEffect(() => {
+    latestImportContextRef.current = importContext;
+  }, [importContext]);
 
   function handleSave() {
     setMessage("");
@@ -129,7 +146,7 @@ export default function ProjectManager({
   function handleLoad(project: Project) {
     if (!canReplaceInputs()) return;
 
-    onLoad(project);
+    onLoad(project, "storage");
 
     setProjectId(project.id);
     setSavedAt(project.updatedAt);
@@ -193,6 +210,8 @@ export default function ProjectManager({
 
     if (!file) return;
 
+    const contextAtStart = importContext;
+
     setMessage("");
     setError("");
     setImporting(true);
@@ -205,6 +224,12 @@ export default function ProjectManager({
 
       const imported = importProjectJson(await file.text());
 
+      if (latestImportContextRef.current !== contextAtStart) {
+        throw new Error(
+          "파일을 읽는 동안 프로젝트가 변경되었습니다. JSON 파일을 다시 선택하세요.",
+        );
+      }
+
       // 파일 읽기와 검증 후 현재 입력 교체 여부를 확인합니다.
       if (!canReplaceInputs()) return;
 
@@ -215,7 +240,7 @@ export default function ProjectManager({
         updatedAt: new Date().toISOString(),
       };
 
-      onLoad(project);
+      onLoad(project, "import");
 
       setProjectId(project.id);
       setSavedAt(null);
