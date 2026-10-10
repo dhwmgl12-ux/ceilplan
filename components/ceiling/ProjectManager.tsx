@@ -1,5 +1,6 @@
 import { useImperativeHandle, useState, type Ref } from "react";
 import type {
+  Adjustment,
   MaterialInput,
   Project,
   SiteInput,
@@ -12,6 +13,7 @@ export interface ProjectManagerHandle {
 }
 
 interface ProjectManagerProps {
+  adjustments: Adjustment[];
   siteInput: SiteInput;
   materialInput: MaterialInput;
   dirty: boolean;
@@ -27,6 +29,7 @@ export default function ProjectManager({
   siteInput,
   materialInput,
   features,
+  adjustments,
   dirty,
   onLoad,
   onNew,
@@ -56,6 +59,10 @@ export default function ProjectManager({
         siteInput: { ...siteInput },
         materialInput: { ...materialInput },
         features: features.map((feature) => ({ ...feature })),
+        adjustments: adjustments.map((adjustment) => ({
+          ...adjustment,
+        })),
+        snapshot: null,
         updatedAt: new Date().toISOString(),
       };
 

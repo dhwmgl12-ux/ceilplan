@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type {
+  Adjustment,
   CalculationResult,
   CeilingFeature,
   MaterialInput,
@@ -9,7 +10,11 @@ import type {
   SiteInput,
 } from "@/types/ceilplan";
 
-import { calculateBase, validateInputs } from "@/lib/calculations/base";
+import {
+  calculateBase,
+  validateAdjustments,
+  validateInputs,
+} from "@/lib/calculations/base";
 import ProjectHeader from "@/components/layout/ProjectHeader";
 import InputPanel from "./InputPanel";
 import MaterialInputPanel from "./MaterialInputPanel";
@@ -18,6 +23,7 @@ import ResultsPanel from "./ResultsPanel";
 import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
 import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
+import AdjustmentInputPanel from "./AdjustmentInputPanel";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -46,6 +52,7 @@ export default function CeilingWorkspace() {
   const [errors, setErrors] = useState<string[]>([]);
   const [stale, setStale] = useState(false);
   const [features, setFeatures] = useState<CeilingFeature[]>([]);
+  const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [featureFormKey, setFeatureFormKey] = useState(0);
 
   const width = Number(inputs.widthMm);
@@ -99,7 +106,10 @@ export default function CeilingWorkspace() {
   }
 
   function handleCalculate() {
-    const validationErrors = validateInputs(inputs, materialInputs);
+    const validationErrors = [
+      ...validateInputs(inputs, materialInputs),
+      ...validateAdjustments(inputs, features, adjustments),
+    ];
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -108,7 +118,10 @@ export default function CeilingWorkspace() {
     }
 
     try {
-      const nextResult = calculateBase(inputs, materialInputs);
+      const nextResult = calculateBase(inputs, materialInputs, {
+        features,
+        adjustments,
+      });
 
       setResult(nextResult);
       setErrors([]);
@@ -128,6 +141,11 @@ export default function CeilingWorkspace() {
     setInputs({ ...project.siteInput });
     setMaterialInputs({ ...project.materialInput });
     setFeatures((project.features ?? []).map((feature) => ({ ...feature })));
+    setAdjustments(
+      (project.adjustments ?? []).map((adjustment) => ({
+        ...adjustment,
+      })),
+    );
     setFeatureFormKey((previous) => previous + 1);
 
     setResult(null);
@@ -165,17 +183,57 @@ export default function CeilingWorkspace() {
     setStale(false);
     setDirty(false);
     setFeatures([]);
+    setAdjustments([]);
+  }
+
+  function markCalculationChanged() {
+    setDirty(true);
+    setErrors([]);
+
+    if (result) {
+      setStale(true);
+    }
   }
 
   function handleAddFeature(feature: CeilingFeature) {
     setFeatures((previous) => [...previous, feature]);
-    setDirty(true);
+    markCalculationChanged();
   }
 
   function handleDeleteFeature(id: string) {
+    const linkedCount = adjustments.filter(
+      (adjustment) => adjustment.featureId === id,
+    ).length;
+
+    if (
+      linkedCount > 0 &&
+      !window.confirm(
+        `이 요소에 연결된 조정값 ${linkedCount}개도 함께 삭제됩니다. 삭제할까요?`,
+      )
+    ) {
+      return;
+    }
+
     setFeatures((previous) => previous.filter((feature) => feature.id !== id));
 
-    setDirty(true);
+    setAdjustments((previous) =>
+      previous.filter((adjustment) => adjustment.featureId !== id),
+    );
+
+    markCalculationChanged();
+  }
+
+  function handleAddAdjustment(adjustment: Adjustment) {
+    setAdjustments((previous) => [...previous, adjustment]);
+    markCalculationChanged();
+  }
+
+  function handleDeleteAdjustment(id: string) {
+    setAdjustments((previous) =>
+      previous.filter((adjustment) => adjustment.id !== id),
+    );
+
+    markCalculationChanged();
   }
 
   const projectManagerRef = useRef<ProjectManagerHandle>(null);
@@ -224,6 +282,7 @@ export default function CeilingWorkspace() {
           siteInput={inputs}
           materialInput={materialInputs}
           features={features}
+          adjustments={adjustments}
           dirty={dirty}
           onLoad={handleLoadProject}
           onNew={handleNewProject}
@@ -332,6 +391,14 @@ export default function CeilingWorkspace() {
                 />
               </div>
             </details>
+
+            <AdjustmentInputPanel
+              key={`adjustments-${featureFormKey}`}
+              features={features}
+              adjustments={adjustments}
+              onAdd={handleAddAdjustment}
+              onDelete={handleDeleteAdjustment}
+            />
           </div>
 
           <div id="preview" className="min-w-0">
