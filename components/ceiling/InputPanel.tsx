@@ -7,11 +7,8 @@ interface InputPanelProps {
 
 export default function InputPanel({ inputs, onChange }: InputPanelProps) {
   return (
-    <section
-      aria-labelledby="input-title"
-      className="min-h-80 min-w-0 rounded-xl border border-slate-200 bg-white p-5"
-    >
-      <h2 id="input-title" className="text-lg font-bold">
+    <section aria-labelledby="input-title" className="cp-card min-h-80">
+      <h2 id="input-title" className="cp-title">
         현장 기본 정보
       </h2>
 
@@ -23,7 +20,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
             value={inputs.name}
             onChange={(event) => onChange("name", event.target.value)}
             placeholder="예: 광주 상가 2층"
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="cp-input mt-2"
           />
         </label>
 
@@ -37,7 +34,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
               value={inputs.widthMm}
               onChange={(event) => onChange("widthMm", event.target.value)}
               placeholder="가로 입력"
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="cp-input mt-2"
             />
           </label>
 
@@ -50,7 +47,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
               value={inputs.lengthMm}
               onChange={(event) => onChange("lengthMm", event.target.value)}
               placeholder="세로 입력"
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="cp-input mt-2"
             />
           </label>
         </div>

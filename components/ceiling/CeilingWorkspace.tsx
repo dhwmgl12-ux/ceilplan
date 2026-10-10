@@ -368,7 +368,7 @@ export default function CeilingWorkspace() {
               onChange={handleMaterialChange}
             />
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="cp-card">
               {errors.length > 0 && (
                 <div
                   id="calculation-errors"
@@ -393,7 +393,7 @@ export default function CeilingWorkspace() {
                 aria-describedby={
                   errors.length > 0 ? "calculation-errors" : undefined
                 }
-                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                className="cp-button-primary w-full"
               >
                 예상 자재 계산하기
               </button>

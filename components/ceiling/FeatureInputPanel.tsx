@@ -93,7 +93,7 @@ export default function FeatureInputPanel({
 
   return (
     <section aria-labelledby="feature-input-title" className="p-5">
-      <h2 id="feature-input-title" className="text-lg font-bold">
+      <h2 id="feature-input-title" className="cp-title">
         현장 요소
       </h2>
 
@@ -109,7 +109,7 @@ export default function FeatureInputPanel({
           onChange={(event) =>
             setType(event.target.value as CeilingFeatureType)
           }
-          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2"
+          className="cp-input mt-2"
         >
           {Object.entries(featureLabels).map(([value, label]) => (
             <option key={value} value={value}>
@@ -146,7 +146,7 @@ export default function FeatureInputPanel({
                 setError("");
               }}
               placeholder="직접 입력"
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="cp-input mt-2"
             />
           </label>
         ))}
@@ -161,7 +161,7 @@ export default function FeatureInputPanel({
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-4 w-full rounded-lg bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+        className="cp-button-primary mt-4 w-full"
       >
         요소 추가
       </button>

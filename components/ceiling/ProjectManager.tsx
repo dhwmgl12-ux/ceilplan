@@ -265,7 +265,8 @@ export default function ProjectManager({
           <button
             type="button"
             onClick={handleNew}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+            // 새 프로젝트 버튼
+            className="cp-button-secondary"
           >
             새 프로젝트
           </button>
@@ -275,7 +276,7 @@ export default function ProjectManager({
             onClick={handleOpenList}
             aria-expanded={listOpen}
             aria-controls="project-list"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+            className="cp-button-secondary"
           >
             프로젝트 목록
           </button>
@@ -283,7 +284,8 @@ export default function ProjectManager({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            // 저장 버튼
+            className="cp-button-primary"
           >
             저장
           </button>

@@ -57,11 +57,8 @@ export default function CeilingPreview({
   const dimensionX = x - 24;
 
   return (
-    <section
-      aria-labelledby="preview-title"
-      className="min-h-80 min-w-0 rounded-xl border border-slate-200 bg-white p-5"
-    >
-      <h2 id="preview-title" className="text-lg font-bold">
+    <section aria-labelledby="preview-title" className="cp-card min-h-80">
+      <h2 id="preview-title" className="cp-title">
         천장 미리보기
       </h2>
 

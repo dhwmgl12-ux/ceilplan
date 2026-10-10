@@ -44,8 +44,8 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
       aria-labelledby="results-title"
       className="min-w-0 space-y-4"
     >
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 id="results-title" className="text-lg font-bold">
+      <div className="cp-card">
+        <h2 id="results-title" className="cp-title">
           예상 자재 산출 요약
         </h2>
 
@@ -147,11 +147,11 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
               ))}
 
               <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <h3 className="mt-3 break-words text-2xl font-bold tracking-tight text-emerald-700 tabular-nums">
+                <h3 className="text-sm font-semibold text-emerald-800">
                   합계 예상 금액
                 </h3>
 
-                <p className="mt-3 break-words text-xl font-bold text-emerald-700">
+                <p className="mt-3 break-words text-2xl font-bold tracking-tight text-emerald-700 tabular-nums">
                   {result.totalEstimatedCost === null
                     ? "단가 입력 필요"
                     : formatMoney(result.totalEstimatedCost)}
@@ -170,8 +170,8 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
 
       {result && (
         <>
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-bold">상세 자재 산출 내역</h3>
+          <div className="cp-card">
+            <h3 className="cp-title">상세 자재 산출 내역</h3>
 
             <div
               role="region"
@@ -246,8 +246,8 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-bold">자재별 금액 계산 내역</h3>
+          <div className="cp-card">
+            <h3 className="cp-title">자재별 금액 계산 내역</h3>
 
             <p className="mt-1 text-xs text-slate-500">
               자재비 기준 · VAT, 운송비, 인건비 제외
@@ -283,8 +283,8 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
         </>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="text-lg font-bold">계산 근거 및 산출 기준</h3>
+      <div className="cp-card">
+        <h3 className="cp-title">계산 근거 및 산출 기준</h3>
 
         <ol className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[

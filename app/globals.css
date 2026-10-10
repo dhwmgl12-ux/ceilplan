@@ -7,12 +7,6 @@ body {
   font-family: Arial, "Malgun Gothic", sans-serif;
 }
 
-a:focus-visible,
-input:focus-visible {
-  outline: 3px solid #93c5fd;
-  outline-offset: 3px;
-}
-
 @layer components {
   .cp-card {
     @apply min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5;
@@ -23,15 +17,15 @@ input:focus-visible {
   }
 
   .cp-input {
-    @apply h-11 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900;
+    @apply h-11 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-900 sm:text-sm;
   }
 
   .cp-button-primary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .cp-button-secondary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
 
@@ -40,18 +34,26 @@ summary {
   cursor: pointer;
 }
 
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-summary:focus-visible {
-  outline: 3px solid #93c5fd;
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #2563eb;
   outline-offset: 3px;
 }
 
-#projects,
-#inputs,
-#preview,
-#results {
+:where(
+  #main-content,
+  #projects,
+  #inputs,
+  #preview,
+  #results,
+  #calculation-errors
+) {
   scroll-margin-top: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }

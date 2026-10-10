@@ -34,7 +34,7 @@ function NumberField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="직접 입력"
-          className="h-11 min-w-0 w-full rounded-lg bg-transparent px-3 text-sm text-slate-900"
+          className="h-11 min-w-0 w-full rounded-lg bg-transparent px-3 text-base text-slate-900 sm:text-sm"
         />
 
         <span className="shrink-0 pr-3 text-xs text-slate-500">{unit}</span>
@@ -49,11 +49,8 @@ export default function MaterialInputPanel({
 }: MaterialInputPanelProps) {
   return (
     <div className="space-y-4">
-      <section
-        aria-labelledby="material-input-title"
-        className="rounded-xl border border-slate-200 bg-white p-5"
-      >
-        <h2 id="material-input-title" className="text-lg font-bold">
+      <section aria-labelledby="material-input-title" className="cp-card">
+        <h2 id="material-input-title" className="cp-title">
           천장 계산 조건
         </h2>
 
@@ -131,11 +128,8 @@ export default function MaterialInputPanel({
         </div>
       </section>
 
-      <section
-        aria-labelledby="loss-title"
-        className="rounded-xl border border-slate-200 bg-white p-5"
-      >
-        <h2 id="loss-title" className="text-lg font-bold">
+      <section aria-labelledby="loss-title" className="cp-card">
+        <h2 id="loss-title" className="cp-title">
           Loss 설정
         </h2>
 
@@ -164,12 +158,9 @@ export default function MaterialInputPanel({
         </p>
       </section>
 
-      <section
-        aria-labelledby="price-title"
-        className="rounded-xl border border-slate-200 bg-white p-5"
-      >
+      <section aria-labelledby="price-title" className="cp-card">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="price-title" className="text-lg font-bold">
+          <h2 id="price-title" className="cp-title">
             자재 단가
           </h2>
 
