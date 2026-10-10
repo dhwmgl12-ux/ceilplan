@@ -1,5 +1,7 @@
 import type { CalculationSnapshot } from "@/types/ceilplan";
 import CalculationBreakdown from "./CalculationBreakdown";
+import { snapshotToCsv } from "@/lib/result-csv";
+import { downloadText } from "@/lib/download";
 
 interface ResultsPanelProps {
   snapshot: CalculationSnapshot | null;
@@ -23,6 +25,19 @@ function formatMoney(value: number | null) {
 export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
   const result = snapshot?.result ?? null;
 
+  function handleDownloadCsv() {
+    if (!snapshot || stale) return;
+
+    downloadText(
+      `ceilplan-result-${Date.now()}.csv`,
+
+      // Excel에서 한글이 깨지지 않도록 UTF-8 BOM을 추가합니다.
+      "\uFEFF" + snapshotToCsv(snapshot),
+
+      "text/csv;charset=utf-8",
+    );
+  }
+
   return (
     <section
       id="results"
@@ -33,6 +48,30 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
         <h2 id="results-title" className="text-lg font-bold">
           예상 자재 산출 요약
         </h2>
+
+        {snapshot && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              disabled={stale}
+              aria-describedby={stale ? "csv-stale-notice" : undefined}
+              className="cp-button-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              결과 CSV 다운로드
+            </button>
+
+            {stale && (
+              <p
+                id="csv-stale-notice"
+                className="mt-2 text-xs leading-5 text-amber-700"
+              >
+                입력이 변경됐거나 복원한 결과입니다. 다시 계산한 뒤 CSV를
+                다운로드하세요.
+              </p>
+            )}
+          </div>
+        )}
 
         {!result ? (
           <p className="mt-4 text-sm leading-6 text-slate-500">

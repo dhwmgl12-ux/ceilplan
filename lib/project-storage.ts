@@ -10,6 +10,8 @@ import {
   type StoredProjectV2,
 } from "@/types/ceilplan";
 
+import { isCalculationSnapshot, normalizeProjectData } from "@/lib/project-io";
+
 const STORAGE_KEY = "ceilplan.projects.v1";
 
 const siteKeys = [
@@ -54,7 +56,9 @@ function isProject(value: unknown): value is Project {
     isFeatureList(value.features) &&
     isAdjustmentList(value.adjustments, value.features) &&
     // Snapshot 검증·저장은 다음 단계에서 추가합니다.
-    (value.snapshot === undefined || value.snapshot === null)
+    (value.snapshot === undefined ||
+      value.snapshot === null ||
+      isCalculationSnapshot(value.snapshot))
   );
 }
 
@@ -154,21 +158,7 @@ function isAdjustmentList(value: unknown, features: unknown): boolean {
 }
 
 function normalizeProject(project: Project): StoredProjectV2 {
-  return {
-    id: project.id,
-    siteInput: { ...project.siteInput },
-    materialInput: { ...project.materialInput },
-    updatedAt: project.updatedAt,
-    features: (project.features ?? []).map((feature) => ({
-      ...feature,
-    })),
-    adjustments: (project.adjustments ?? []).map((adjustment) => ({
-      ...adjustment,
-    })),
-
-    // Snapshot 저장은 다음 단계에서 구현합니다.
-    snapshot: null,
-  };
+  return normalizeProjectData(project);
 }
 
 function isStoredProjectV2(value: unknown): value is StoredProjectV2 {
@@ -176,7 +166,7 @@ function isStoredProjectV2(value: unknown): value is StoredProjectV2 {
     isProject(value) &&
     Array.isArray(value.features) &&
     Array.isArray(value.adjustments) &&
-    value.snapshot === null
+    (value.snapshot === null || isCalculationSnapshot(value.snapshot))
   );
 }
 

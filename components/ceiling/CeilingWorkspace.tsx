@@ -182,10 +182,14 @@ export default function CeilingWorkspace() {
     );
     setFeatureFormKey((previous) => previous + 1);
 
-    setSnapshot(null);
+    setSnapshot(project.snapshot ? structuredClone(project.snapshot) : null);
     setErrors([]);
-    setStale(false);
-    setDirty(false);
+
+    // 외부에서 가져오거나 저장에서 복원한 결과는 다시 계산하게 합니다.
+    setStale(Boolean(project.snapshot));
+
+    // 불러온 데이터를 덮어쓰기 전에 확인받도록 보수적으로 표시합니다.
+    setDirty(true);
   }
 
   function handleNewProject() {
@@ -317,6 +321,7 @@ export default function CeilingWorkspace() {
           materialInput={materialInputs}
           features={features}
           adjustments={adjustments}
+          snapshot={snapshot}
           dirty={dirty}
           onLoad={handleLoadProject}
           onNew={handleNewProject}
