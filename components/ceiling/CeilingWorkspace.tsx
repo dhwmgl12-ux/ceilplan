@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type {
   Adjustment,
-  CalculationResult,
+  CalculationSnapshot,
   CeilingFeature,
   MaterialInput,
   Project,
@@ -48,7 +48,8 @@ export default function CeilingWorkspace() {
     carryingUnitPrice: "",
   });
 
-  const [result, setResult] = useState<CalculationResult | null>(null);
+  const [snapshot, setSnapshot] = useState<CalculationSnapshot | null>(null);
+  const result = snapshot?.result ?? null;
   const [errors, setErrors] = useState<string[]>([]);
   const [stale, setStale] = useState(false);
   const [features, setFeatures] = useState<CeilingFeature[]>([]);
@@ -113,17 +114,45 @@ export default function CeilingWorkspace() {
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
+
+      if (snapshot) {
+        setStale(true);
+      }
+
       moveAfterCalculation("inputs");
       return;
     }
 
     try {
-      const nextResult = calculateBase(inputs, materialInputs, {
+      // 계산에 사용한 값과 Snapshot에 보관할 값을 일치시킵니다.
+      const calculationInput = structuredClone({
+        siteInput: inputs,
+        materialInput: materialInputs,
         features,
         adjustments,
       });
 
-      setResult(nextResult);
+      const nextResult = calculateBase(
+        calculationInput.siteInput,
+        calculationInput.materialInput,
+        {
+          features: calculationInput.features,
+          adjustments: calculationInput.adjustments,
+        },
+      );
+
+      const nextSnapshot: CalculationSnapshot = {
+        calculatedAt: new Date().toISOString(),
+
+        // CeilPlan 내부 계산 정책 버전입니다.
+        // 공식 시공 기준의 버전이 아닙니다.
+        calculationRuleVersion: "area-manual-adjustment-v1",
+
+        ...calculationInput,
+        result: nextResult,
+      };
+
+      setSnapshot(nextSnapshot);
       setErrors([]);
       setStale(false);
 
@@ -132,6 +161,11 @@ export default function CeilingWorkspace() {
       setErrors([
         error instanceof Error ? error.message : "계산 중 오류가 발생했습니다.",
       ]);
+
+      // 실패한 계산으로 이전 Snapshot을 덮어쓰지 않습니다.
+      if (snapshot) {
+        setStale(true);
+      }
 
       moveAfterCalculation("inputs");
     }
@@ -148,7 +182,7 @@ export default function CeilingWorkspace() {
     );
     setFeatureFormKey((previous) => previous + 1);
 
-    setResult(null);
+    setSnapshot(null);
     setErrors([]);
     setStale(false);
     setDirty(false);
@@ -178,7 +212,7 @@ export default function CeilingWorkspace() {
 
     setFeatureFormKey((previous) => previous + 1);
 
-    setResult(null);
+    setSnapshot(null);
     setErrors([]);
     setStale(false);
     setDirty(false);
@@ -409,7 +443,7 @@ export default function CeilingWorkspace() {
             />
           </div>
 
-          <ResultsPanel result={result} stale={stale} />
+          <ResultsPanel snapshot={snapshot} stale={stale} />
         </div>
       </main>
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[1280px]:hidden">

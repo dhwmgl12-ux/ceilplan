@@ -1,7 +1,8 @@
-import type { CalculationResult } from "@/types/ceilplan";
+import type { CalculationSnapshot } from "@/types/ceilplan";
+import CalculationBreakdown from "./CalculationBreakdown";
 
 interface ResultsPanelProps {
-  result: CalculationResult | null;
+  snapshot: CalculationSnapshot | null;
   stale: boolean;
 }
 
@@ -19,7 +20,9 @@ function formatMoney(value: number | null) {
   })} 원`;
 }
 
-export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
+export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
+  const result = snapshot?.result ?? null;
+
   return (
     <section
       id="results"
@@ -50,6 +53,30 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
             <p className="mt-3 text-sm text-slate-500">
               계산 당시 공간 면적: {formatQuantity(result.areaM2)} ㎡
             </p>
+
+            {snapshot && (
+              <div className="mt-2 space-y-1 text-xs leading-5 text-slate-500">
+                <p className="break-words">
+                  계산 당시 현장: {snapshot.siteInput.name}
+                </p>
+
+                <p>
+                  계산 시각:{" "}
+                  {new Date(snapshot.calculatedAt).toLocaleString("ko-KR", {
+                    timeZone: "Asia/Seoul",
+                  })}
+                </p>
+
+                <p className="break-words">
+                  계산 정책: {snapshot.calculationRuleVersion}
+                </p>
+
+                <p>
+                  현재 입력 폼과 미리보기는 수정 중인 값이며, 아래 결과와 근거는
+                  계산 당시 값입니다.
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1600px]:grid-cols-4">
               {result.materials.map((material) => (
@@ -161,57 +188,22 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               </table>
             </div>
 
-            <details className="mt-4 rounded-lg border border-slate-200">
-              <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-blue-700">
-                Loss 증가량과 발주 올림분 확인
-              </summary>
-
-              <div className="space-y-3 border-t border-slate-100 p-3">
-                {result.materials.map((material) => (
-                  <div key={material.id} className="rounded-lg bg-slate-50 p-3">
-                    <h4 className="text-sm font-semibold">{material.name}</h4>
-
-                    <dl className="mt-3 space-y-2 text-xs">
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-slate-500">Loss 증가량</dt>
-                        <dd className="text-right tabular-nums">
-                          +{formatQuantity(material.lossAmount)}{" "}
-                          {material.quantityUnit}
-                        </dd>
-                      </div>
-
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-slate-500">Loss 적용 후</dt>
-                        <dd className="text-right tabular-nums">
-                          {formatQuantity(material.quantityAfterLoss)}{" "}
-                          {material.quantityUnit}
-                        </dd>
-                      </div>
-
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-slate-500">발주 올림분</dt>
-                        <dd className="text-right tabular-nums">
-                          +{formatQuantity(material.roundingSurplus)}{" "}
-                          {material.quantityUnit}
-                        </dd>
-                      </div>
-
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-slate-500">주문 총수량</dt>
-                        <dd className="text-right font-semibold tabular-nums">
-                          {formatQuantity(material.orderedQuantity)}{" "}
-                          {material.quantityUnit}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
+            {snapshot && (
+              <div className="mt-4 space-y-3">
+                {snapshot.result.materials.map((material) => (
+                  <CalculationBreakdown
+                    key={material.id}
+                    snapshot={snapshot}
+                    material={material}
+                  />
                 ))}
               </div>
-            </details>
+            )}
 
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              현장 요소의 추가·공제·보강은 미반영입니다. 금속 자재의 기본 수량과
-              증가량은 m, 최종 발주는 본수입니다.
+              사용자 입력 현장 조정값을 Loss 적용 전에 반영합니다. 금속 자재의
+              기본 물량과 증감은 m, 최종 발주는 본수입니다. 요소 크기를 이용한
+              자동 공제·보강은 지원하지 않습니다.
             </p>
           </div>
 
@@ -258,9 +250,9 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
         <ol className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[
             {
-              title: "기본 물량",
+              title: "기본 물량과 현장 조정",
               description:
-                "공간 면적과 보드 규격·겹수, 골조 간격으로 이론 필요량을 계산합니다.",
+                "면적 기반 이론 물량에 사용자가 입력한 현장 추가·공제를 반영합니다.",
             },
             {
               title: "Loss 적용",
@@ -325,7 +317,7 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
             <div>
               <dt className="font-semibold">Loss 적용 수량</dt>
               <dd className="text-slate-600">
-                이론 수량 × (1 + Loss 비율 ÷ 100)
+                조정 후 이론 물량 × (1 + Loss 비율 ÷ 100)
               </dd>
             </div>
 
@@ -357,9 +349,9 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
         </details>
 
         <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-6 text-slate-500">
-          면적 기반 예상값입니다. 현장 요소는 시각적으로만 표시하며,
-          추가·공제·보강 수량은 미반영입니다. 실제 골조 배치와 절단·잔재, 구조
-          안전 판단은 포함하지 않습니다.
+          면적 기반 예상값이며 사용자 입력 조정값을 반영합니다. 현장 요소별 자동
+          공제·보강, 실제 골조 배치, 절단·잔재 및 구조 안전 판단은 포함하지
+          않습니다.
         </p>
       </div>
     </section>
