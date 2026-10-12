@@ -45,6 +45,24 @@ JSON 파일로 프로젝트를 백업할 수 있습니다.
 작업 원칙은 [AGENTS.md](AGENTS.md), 제품 범위는 [제품 명세](docs/product-spec.md),
 계산 기준은 [도메인 규칙](docs/domain-rules.md)을 참고합니다.
 
+## 검증
+
+```sh
+npm run lint
+npx tsc --noEmit
+npm test
+npm run build
+```
+
+빌드 후 실행:
+
+```sh
+npm run start
+```
+
+자동 검사 결과와 브라우저별 확인 결과는
+[배포 점검표](docs/release-checklist.md)에 기록합니다.
+
 테스트는 Node.js 내장 테스트 러너를 사용합니다.
 
 검증 대상:
