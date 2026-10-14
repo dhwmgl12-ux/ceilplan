@@ -191,30 +191,6 @@ export default function CeilingPreview({
                     strokeWidth={1}
                   />
                 )}
-
-                {hasRoomForDetails && (
-                  <>
-                    <rect
-                      x={featureX + 1}
-                      y={featureY + 1}
-                      width={15}
-                      height={14}
-                      fill="white"
-                      fillOpacity={0.9}
-                    />
-                    <text
-                      x={featureX + 8.5}
-                      y={featureY + 8}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontSize={10}
-                      fontWeight="bold"
-                      fill={color}
-                    >
-                      {number}
-                    </text>
-                  </>
-                )}
               </g>
             );
           })}
@@ -287,6 +263,104 @@ export default function CeilingPreview({
           >
             {length.toLocaleString("ko-KR")} mm
           </text>
+
+          {/* 번호는 도형과 치수선을 그린 뒤 마지막에 표시합니다. */}
+          <g aria-hidden="true" pointerEvents="none">
+            {visibleFeatures.map((feature) => {
+              const number =
+                features.findIndex((item) => item.id === feature.id) + 1;
+
+              const featureX = x + feature.xMm * scale;
+              const featureY = y + feature.yMm * scale;
+              const featureWidth = feature.widthMm * scale;
+              const featureHeight = feature.lengthMm * scale;
+
+              const centerX = featureX + featureWidth / 2;
+              const centerY = featureY + featureHeight / 2;
+
+              const color = featureColors[feature.type];
+
+              // 아래 값은 SVG 표시 크기이며 실제 시공 치수가 아닙니다.
+              const badgeWidth = Math.max(22, String(number).length * 8 + 10);
+              const badgeHeight = 18;
+              const gap = 8;
+              const canvasPadding = 8;
+
+              const fitsInside =
+                featureWidth >= badgeWidth + 4 &&
+                featureHeight >= badgeHeight + 4;
+
+              // 작은 요소는 우측에 표시하고, 캔버스 밖으로 나가면 좌측에 표시합니다.
+              const rightX = featureX + featureWidth + gap;
+              const placeOnRight =
+                rightX + badgeWidth <= canvasWidth - canvasPadding;
+
+              const outsideX = placeOnRight
+                ? rightX
+                : featureX - gap - badgeWidth;
+
+              const badgeX = fitsInside
+                ? featureX + 2
+                : Math.max(
+                    canvasPadding,
+                    Math.min(
+                      outsideX,
+                      canvasWidth - badgeWidth - canvasPadding,
+                    ),
+                  );
+
+              const badgeY = fitsInside
+                ? featureY + 2
+                : Math.max(
+                    canvasPadding,
+                    Math.min(
+                      centerY - badgeHeight / 2,
+                      canvasHeight - badgeHeight - canvasPadding,
+                    ),
+                  );
+
+              const lineEndX = placeOnRight ? badgeX : badgeX + badgeWidth;
+
+              return (
+                <g key={`feature-number-${feature.id}`}>
+                  {!fitsInside && (
+                    <line
+                      x1={centerX}
+                      y1={centerY}
+                      x2={lineEndX}
+                      y2={badgeY + badgeHeight / 2}
+                      stroke={color}
+                      strokeWidth={1}
+                    />
+                  )}
+
+                  <rect
+                    x={badgeX}
+                    y={badgeY}
+                    width={badgeWidth}
+                    height={badgeHeight}
+                    rx={3}
+                    fill="white"
+                    fillOpacity={0.95}
+                    stroke={color}
+                    strokeWidth={1}
+                  />
+
+                  <text
+                    x={badgeX + badgeWidth / 2}
+                    y={badgeY + badgeHeight / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={11}
+                    fontWeight="bold"
+                    fill={color}
+                  >
+                    {number}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
         </svg>
       ) : (
         <div
@@ -335,7 +409,8 @@ export default function CeilingPreview({
       {outsideCount > 0 && (
         <p role="alert" className="mt-3 text-xs leading-5 text-red-700">
           공간 크기 변경으로 요소 {outsideCount}개가 범위를 벗어났습니다. 해당
-          요소는 도면에서 숨겼습니다. 목록에서 삭제하고 다시 입력하세요.
+          요소는 도면에서 숨겼습니다. 현장 요소 목록에서 위치·크기를 수정하거나
+          삭제하세요.
         </p>
       )}
 
