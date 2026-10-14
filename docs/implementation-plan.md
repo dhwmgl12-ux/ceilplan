@@ -37,10 +37,11 @@ ceilplan/
     result-csv.ts
     download.ts
 
-  tests/
+    tests/
     base.test.mjs
     project-io.test.mjs
     result-csv.test.mjs
+    project-storage.test.mjs
 
   docs/
     product-spec.md
