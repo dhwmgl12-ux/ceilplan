@@ -11,6 +11,7 @@ interface FeatureInputPanelProps {
   lengthMm: string;
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
+  onUpdate: (feature: CeilingFeature) => void;
   onDelete: (id: string) => void;
 }
 
@@ -19,6 +20,7 @@ export default function FeatureInputPanel({
   lengthMm,
   features,
   onAdd,
+  onUpdate,
   onDelete,
 }: FeatureInputPanelProps) {
   const [type, setType] = useState<CeilingFeatureType>("AIR_CONDITIONER");
@@ -32,7 +34,33 @@ export default function FeatureInputPanel({
 
   const [error, setError] = useState("");
 
-  function handleAdd() {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  function resetForm() {
+    setEditingId(null);
+    setType("AIR_CONDITIONER");
+    setDraft({
+      xMm: "",
+      yMm: "",
+      widthMm: "",
+      lengthMm: "",
+    });
+    setError("");
+  }
+
+  function startEditing(feature: CeilingFeature) {
+    setEditingId(feature.id);
+    setType(feature.type);
+    setDraft({
+      xMm: String(feature.xMm),
+      yMm: String(feature.yMm),
+      widthMm: String(feature.widthMm),
+      lengthMm: String(feature.lengthMm),
+    });
+    setError("");
+  }
+
+  function handleSubmit() {
     const roomWidth = Number(widthMm);
     const roomLength = Number(lengthMm);
 
@@ -43,6 +71,14 @@ export default function FeatureInputPanel({
       roomLength <= 0
     ) {
       setError("먼저 공간 가로와 세로에 양수를 입력하세요.");
+      return;
+    }
+
+    if (
+      editingId !== null &&
+      !features.some((feature) => feature.id === editingId)
+    ) {
+      setError("수정 중인 요소가 삭제되었습니다. 수정 취소를 눌러주세요.");
       return;
     }
 
@@ -72,23 +108,22 @@ export default function FeatureInputPanel({
       return;
     }
 
-    onAdd({
-      id: crypto.randomUUID(),
+    const feature: CeilingFeature = {
+      id: editingId ?? crypto.randomUUID(),
       type,
       xMm: x,
       yMm: y,
       widthMm: width,
       lengthMm: length,
-    });
+    };
 
-    setDraft({
-      xMm: "",
-      yMm: "",
-      widthMm: "",
-      lengthMm: "",
-    });
+    if (editingId !== null) {
+      onUpdate(feature);
+    } else {
+      onAdd(feature);
+    }
 
-    setError("");
+    resetForm();
   }
 
   return (
@@ -98,8 +133,8 @@ export default function FeatureInputPanel({
       </h2>
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
-        위치는 공간 왼쪽 상단 기준입니다. 요소별 공제·보강 계산은 아직 반영하지
-        않습니다.
+        위치는 공간 왼쪽 상단 기준입니다. 요소 크기로 자재를 자동 공제하거나
+        보강하지 않습니다. 자재 증감은 현장 조정값에서 직접 입력하세요.
       </p>
 
       <label className="mt-4 block text-sm font-medium">
@@ -158,13 +193,32 @@ export default function FeatureInputPanel({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleAdd}
-        className="cp-button-primary mt-4 w-full"
-      >
-        요소 추가
-      </button>
+      {editingId !== null && (
+        <p role="status" className="mt-3 text-xs leading-5 text-blue-700">
+          선택한 요소를 수정 중입니다. 수정 적용을 눌러야 반영됩니다. 연결된
+          조정값은 자동으로 변경되지 않습니다.
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="cp-button-primary flex-1"
+        >
+          {editingId !== null ? "요소 수정 적용" : "요소 추가"}
+        </button>
+
+        {editingId !== null && (
+          <button
+            type="button"
+            onClick={resetForm}
+            className="cp-button-secondary"
+          >
+            수정 취소
+          </button>
+        )}
+      </div>
 
       <ul className="mt-4 space-y-2">
         {features.map((feature, index) => (
@@ -187,14 +241,26 @@ export default function FeatureInputPanel({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onDelete(feature.id)}
-              aria-label={`${index + 1}번 ${featureLabels[feature.type]} 삭제`}
-              className="shrink-0 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-            >
-              삭제
-            </button>
+            <div className="flex shrink-0 flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => startEditing(feature)}
+                disabled={editingId !== null && editingId !== feature.id}
+                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 수정`}
+                className="cp-button-secondary disabled:opacity-50"
+              >
+                수정
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onDelete(feature.id)}
+                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 삭제`}
+                className="min-h-11 rounded px-3 py-2 text-xs text-red-700 hover:bg-red-50"
+              >
+                삭제
+              </button>
+            </div>
           </li>
         ))}
       </ul>

@@ -13,6 +13,7 @@ interface AdjustmentInputPanelProps {
   features: CeilingFeature[];
   adjustments: Adjustment[];
   onAdd: (adjustment: Adjustment) => void;
+  onUpdate: (adjustment: Adjustment) => void;
   onDelete: (id: string) => void;
 }
 
@@ -26,6 +27,7 @@ export default function AdjustmentInputPanel({
   features,
   adjustments,
   onAdd,
+  onUpdate,
   onDelete,
 }: AdjustmentInputPanelProps) {
   const [featureId, setFeatureId] = useState("");
@@ -35,6 +37,28 @@ export default function AdjustmentInputPanel({
   const [memo, setMemo] = useState("");
   const [error, setError] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  function resetForm() {
+    setEditingId(null);
+    setFeatureId("");
+    setMaterialId("BOARD");
+    setAdjustmentType("ADD");
+    setQuantity("");
+    setMemo("");
+    setError("");
+  }
+
+  function startEditing(adjustment: Adjustment) {
+    setEditingId(adjustment.id);
+    setFeatureId(adjustment.featureId);
+    setMaterialId(adjustment.materialId);
+    setAdjustmentType(adjustment.adjustmentType);
+    setQuantity(String(adjustment.quantity));
+    setMemo(adjustment.memo);
+    setError("");
+  }
+
   // 선택했던 요소가 삭제됐으면 선택되지 않은 상태로 표시합니다.
   const selectedFeatureId = features.some((feature) => feature.id === featureId)
     ? featureId
@@ -42,8 +66,16 @@ export default function AdjustmentInputPanel({
 
   const unit = materialId === "BOARD" ? "㎡" : "m";
 
-  function handleAdd() {
+  function handleSubmit() {
     setError("");
+
+    if (
+      editingId !== null &&
+      !adjustments.some((adjustment) => adjustment.id === editingId)
+    ) {
+      setError("수정 중인 조정값이 삭제되었습니다. 수정 취소를 눌러주세요.");
+      return;
+    }
 
     if (!selectedFeatureId) {
       setError("연결할 현장 요소를 선택하세요.");
@@ -63,7 +95,7 @@ export default function AdjustmentInputPanel({
     }
 
     const common = {
-      id: crypto.randomUUID(),
+      id: editingId ?? crypto.randomUUID(),
       featureId: selectedFeatureId,
       adjustmentType,
       quantity: value,
@@ -85,9 +117,13 @@ export default function AdjustmentInputPanel({
             unit: "m",
           };
 
-    onAdd(adjustment);
-    setQuantity("");
-    setMemo("");
+    if (editingId !== null) {
+      onUpdate(adjustment);
+    } else {
+      onAdd(adjustment);
+    }
+
+    resetForm();
   }
 
   return (
@@ -206,14 +242,33 @@ export default function AdjustmentInputPanel({
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={features.length === 0}
-          className="cp-button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          조정값 추가
-        </button>
+        {editingId !== null && (
+          <p role="status" className="text-xs leading-5 text-blue-700">
+            선택한 조정값을 수정 중입니다. 수정 적용을 눌러야 계산 입력에
+            반영됩니다.
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={features.length === 0}
+            className="cp-button-primary flex-1"
+          >
+            {editingId !== null ? "조정값 수정 적용" : "조정값 추가"}
+          </button>
+
+          {editingId !== null && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="cp-button-secondary"
+            >
+              수정 취소
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-5 border-t border-slate-100 pt-4">
@@ -262,14 +317,28 @@ export default function AdjustmentInputPanel({
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onDelete(adjustment.id)}
-                      aria-label={`${materialLabels[adjustment.materialId]} 조정값 삭제: ${adjustment.memo}`}
-                      className="shrink-0 rounded px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-                    >
-                      삭제
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(adjustment)}
+                        disabled={
+                          editingId !== null && editingId !== adjustment.id
+                        }
+                        aria-label={`${materialLabels[adjustment.materialId]} 조정값 수정: ${adjustment.memo}`}
+                        className="cp-button-secondary disabled:opacity-50"
+                      >
+                        수정
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onDelete(adjustment.id)}
+                        aria-label={`${materialLabels[adjustment.materialId]} 조정값 삭제: ${adjustment.memo}`}
+                        className="min-h-11 rounded px-3 py-2 text-xs text-red-700 hover:bg-red-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
                 </li>
               );

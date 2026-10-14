@@ -269,6 +269,17 @@ export default function CeilingWorkspace() {
     markCalculationChanged();
   }
 
+  function handleUpdateFeature(nextFeature: CeilingFeature) {
+    setFeatures((previous) =>
+      previous.map((feature) =>
+        feature.id === nextFeature.id ? { ...nextFeature } : feature,
+      ),
+    );
+
+    // 요소 ID를 유지하므로 연결된 조정값도 유지됩니다.
+    markCalculationChanged();
+  }
+
   function handleDeleteFeature(id: string) {
     const linkedCount = adjustments.filter(
       (adjustment) => adjustment.featureId === id,
@@ -294,6 +305,18 @@ export default function CeilingWorkspace() {
 
   function handleAddAdjustment(adjustment: Adjustment) {
     setAdjustments((previous) => [...previous, adjustment]);
+    markCalculationChanged();
+  }
+
+  function handleUpdateAdjustment(nextAdjustment: Adjustment) {
+    setAdjustments((previous) =>
+      previous.map((adjustment) =>
+        adjustment.id === nextAdjustment.id
+          ? { ...nextAdjustment }
+          : adjustment,
+      ),
+    );
+
     markCalculationChanged();
   }
 
@@ -474,6 +497,7 @@ export default function CeilingWorkspace() {
                   lengthMm={inputs.lengthMm}
                   features={features}
                   onAdd={handleAddFeature}
+                  onUpdate={handleUpdateFeature}
                   onDelete={handleDeleteFeature}
                 />
               </div>
@@ -484,6 +508,7 @@ export default function CeilingWorkspace() {
               features={features}
               adjustments={adjustments}
               onAdd={handleAddAdjustment}
+              onUpdate={handleUpdateAdjustment}
               onDelete={handleDeleteAdjustment}
             />
           </div>
