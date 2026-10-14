@@ -199,8 +199,6 @@ export default function CeilingWorkspace() {
       if (snapshot) {
         setStale(true);
       }
-
-      moveAfterCalculation("inputs");
     }
   }
 
