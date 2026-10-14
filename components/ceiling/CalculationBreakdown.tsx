@@ -41,9 +41,36 @@ export default function CalculationBreakdown({
 
   const rows: { label: string; value: string }[] = [
     {
-      label: "공간 치수",
+      label: "전체 외곽 치수",
       value: `${siteInput.widthMm} × ${siteInput.lengthMm} mm`,
     },
+    {
+      label: "공간 형태",
+      value:
+        siteInput.shape === "L"
+          ? "ㄱ자 · 왼쪽 아래 제외"
+          : siteInput.shape === "U"
+            ? "ㄷ자 · 오른쪽 중간 제외"
+            : "직사각형",
+    },
+    ...(siteInput.shape === "L" || siteInput.shape === "U"
+      ? [
+          {
+            label: "제외 영역",
+            value:
+              `${siteInput.cutoutWidthMm} × ` +
+              `${siteInput.cutoutLengthMm} mm`,
+          },
+          ...(siteInput.shape === "U"
+            ? [
+                {
+                  label: "제외 영역 위쪽 거리",
+                  value: `${siteInput.cutoutTopMm} mm`,
+                },
+              ]
+            : []),
+        ]
+      : []),
     {
       label: "천장 전체 면적",
       value: `${formatNumber(result.areaM2)} ㎡`,

@@ -2,39 +2,38 @@ import {
   featureColors,
   featureLabels,
   type CeilingFeature,
+  type SiteInput,
 } from "@/types/ceilplan";
 
+import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
+
 interface CeilingPreviewProps {
-  widthMm: string;
-  lengthMm: string;
+  inputs: SiteInput;
   features: CeilingFeature[];
 }
 
 export default function CeilingPreview({
-  widthMm,
-  lengthMm,
+  inputs,
   features,
 }: CeilingPreviewProps) {
-  const width = Number(widthMm);
-  const length = Number(lengthMm);
+  const room = tryGetRoomGeometry(inputs);
+  const width = room?.width ?? 0;
+  const length = room?.length ?? 0;
+  const isValid = room !== null;
 
-  const isValid =
-    widthMm.trim() !== "" &&
-    lengthMm.trim() !== "" &&
-    Number.isFinite(width) &&
-    Number.isFinite(length) &&
-    width > 0 &&
-    length > 0;
-
-  const visibleFeatures = isValid
-    ? features.filter(
-        (feature) =>
-          feature.xMm + feature.widthMm <= width &&
-          feature.yMm + feature.lengthMm <= length,
+  const visibleFeatures = room
+    ? features.filter((feature) =>
+        isBoxInsideRoom(room, {
+          x: feature.xMm,
+          y: feature.yMm,
+          width: feature.widthMm,
+          length: feature.lengthMm,
+        }),
       )
     : [];
 
-  const outsideCount = isValid ? features.length - visibleFeatures.length : 0;
+  const outsideCount = room ? features.length - visibleFeatures.length : 0;
+  // 이 아래의 기존 canvasWidth와 배율 계산은 유지합니다.
 
   // SVG 내부 좌표 기준의 표시 영역입니다.
   // 실제 공간 치수나 시공 기준이 아닙니다.
@@ -73,7 +72,7 @@ export default function CeilingPreview({
           role="img"
           aria-labelledby="room-title room-description"
         >
-          <title id="room-title">직사각형 천장 공간</title>
+          <title id="room-title">천장 공간 외곽 형태</title>
 
           <desc id="room-description">
             가로 {width.toLocaleString("ko-KR")} 밀리미터, 세로{" "}
@@ -81,11 +80,12 @@ export default function CeilingPreview({
           </desc>
 
           {/* 공간 */}
-          <rect
-            x={x}
-            y={y}
-            width={roomWidth}
-            height={roomHeight}
+          <polygon
+            points={
+              room?.points
+                .map((point) => `${x + point.x * scale},${y + point.y * scale}`)
+                .join(" ") ?? ""
+            }
             fill="#eff6ff"
             stroke="#334155"
             strokeWidth={3}
@@ -368,9 +368,9 @@ export default function CeilingPreview({
           className="mt-4 flex aspect-[5/4] items-center justify-center rounded-lg border border-dashed border-blue-200 bg-blue-50/40 p-6"
         >
           <p className="text-center text-sm leading-6 text-slate-500">
-            공간 가로와 세로에
+            공간 형태와 전체 치수,
             <br />
-            0보다 큰 숫자를 입력해 주세요.
+            제외 영역의 치수를 확인해 주세요.
           </p>
         </div>
       )}

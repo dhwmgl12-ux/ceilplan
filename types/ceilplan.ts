@@ -1,7 +1,21 @@
+export type RoomShapeType = "RECTANGLE" | "L" | "U";
+
 export interface SiteInput {
   name: string;
+
+  // 전체 공간을 감싸는 직사각형의 치수
   widthMm: string;
   lengthMm: string;
+
+  // 이전 프로젝트에 없으면 직사각형으로 취급합니다.
+  shape?: RoomShapeType;
+
+  // ㄱ자·ㄷ자에서 제외되는 직사각형의 치수
+  cutoutWidthMm?: string;
+  cutoutLengthMm?: string;
+
+  // ㄷ자에서 제외 영역이 시작하는 위치: 전체 공간 위쪽 기준
+  cutoutTopMm?: string;
 }
 
 export interface MaterialInput {
@@ -153,12 +167,10 @@ export interface MaterialCalculation {
 }
 
 export interface CalculationResult {
-  // 개구부 공제 전 직사각형 전체 면적
+  // 공간 외곽 형태를 반영한 면적, 현장 조정값 적용 전
   areaM2: number;
 
   materials: MaterialCalculation[];
-
-  // 단가 미입력이 하나라도 있으면 null
   totalEstimatedCost: number | null;
 }
 

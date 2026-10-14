@@ -10,7 +10,11 @@ import {
   type StoredProjectV2,
 } from "@/types/ceilplan";
 
-import { isCalculationSnapshot, normalizeProjectData } from "@/lib/project-io";
+import {
+  isCalculationSnapshot,
+  normalizeProjectData,
+  isRoomShapeInput,
+} from "@/lib/project-io";
 
 const STORAGE_KEY = "ceilplan.projects.v1";
 
@@ -52,6 +56,7 @@ function isProject(value: unknown): value is Project {
     typeof value.updatedAt === "string" &&
     Number.isFinite(Date.parse(value.updatedAt)) &&
     hasStringFields(value.siteInput, siteKeys) &&
+    isRoomShapeInput(value.siteInput) &&
     hasStringFields(value.materialInput, materialKeys) &&
     isFeatureList(value.features) &&
     isAdjustmentList(value.adjustments, value.features) &&

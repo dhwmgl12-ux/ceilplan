@@ -601,3 +601,53 @@ test("소수 전체 공제 후에도 단가 미입력은 null로 유지한다", 
   assert.equal(mbar.estimatedCost, null);
   assert.equal(result.totalEstimatedCost, null);
 });
+
+test("공간 형태를 반영한 면적으로 자재를 계산한다", () => {
+  const result = calculateBase(
+    {
+      ...adjustmentSite,
+      widthMm: "6000",
+      lengthMm: "4000",
+      shape: "L",
+      cutoutWidthMm: "2000",
+      cutoutLengthMm: "1000",
+    },
+    adjustmentMaterial,
+  );
+
+  // 24㎡ - 2㎡ = 22㎡
+  assert.equal(result.areaM2, 22);
+  assert.equal(result.materials[0].theoreticalQuantity, 22);
+  assert.equal(result.materials[1].theoreticalQuantity, 22);
+});
+
+test("ㄷ자 제외 영역에 있는 조정 연결 요소는 계산을 막는다", () => {
+  assert.throws(
+    () =>
+      calculateBase(
+        {
+          ...adjustmentSite,
+          widthMm: "6000",
+          lengthMm: "4000",
+          shape: "U",
+          cutoutWidthMm: "2000",
+          cutoutLengthMm: "2000",
+          cutoutTopMm: "1000",
+        },
+        adjustmentMaterial,
+        {
+          features: [
+            {
+              ...adjustmentFeature,
+              xMm: 4500,
+              yMm: 1500,
+              widthMm: 500,
+              lengthMm: 500,
+            },
+          ],
+          adjustments: [createAdjustment()],
+        },
+      ),
+    /공간 밖/,
+  );
+});

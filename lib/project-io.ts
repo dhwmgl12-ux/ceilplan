@@ -95,6 +95,7 @@ function validInputs(value: unknown): boolean {
 
   if (
     !stringFields(value.siteInput, siteKeys) ||
+    !isRoomShapeInput(value.siteInput) ||
     !stringFields(value.materialInput, materialKeys) ||
     !Array.isArray(value.features) ||
     !value.features.every(isFeature) ||
@@ -322,4 +323,27 @@ export function importProjectJson(raw: string): StoredProjectV2 {
   }
 
   return normalizeProjectData(value.project);
+}
+
+export function isRoomShapeInput(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const site = value as Record<string, unknown>;
+
+  if (
+    site.shape !== undefined &&
+    site.shape !== "RECTANGLE" &&
+    site.shape !== "L" &&
+    site.shape !== "U"
+  ) {
+    return false;
+  }
+
+  const keys = ["cutoutWidthMm", "cutoutLengthMm", "cutoutTopMm"];
+
+  return keys.every(
+    (key) => site[key] === undefined || typeof site[key] === "string",
+  );
 }

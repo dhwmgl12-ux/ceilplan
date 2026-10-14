@@ -9,6 +9,13 @@ import type {
   SiteInput,
 } from "../../types/ceilplan";
 
+import {
+  getRoomGeometry,
+  tryGetRoomGeometry,
+  validateRoom,
+  isBoxInsideRoom,
+} from "../geometry/room.ts";
+
 export interface CalculationOptions {
   features?: CeilingFeature[];
   adjustments?: Adjustment[];
@@ -52,7 +59,7 @@ export function validateInputs(
   site: SiteInput,
   material: MaterialInput,
 ): string[] {
-  const errors: string[] = [];
+  const errors: string[] = validateRoom(site);
   const inputs = { ...site, ...material };
 
   if (!site.name.trim()) {
@@ -118,8 +125,7 @@ export function validateAdjustments(
   }
 
   const adjustmentIds = new Set<string>();
-  const roomWidth = Number(site.widthMm);
-  const roomLength = Number(site.lengthMm);
+  const room = tryGetRoomGeometry(site);
 
   for (const adjustment of adjustments) {
     const label = adjustment.id || "ID 없음";
@@ -200,8 +206,13 @@ export function validateAdjustments(
     }
 
     if (
-      feature.xMm + feature.widthMm > roomWidth ||
-      feature.yMm + feature.lengthMm > roomLength
+      room &&
+      !isBoxInsideRoom(room, {
+        x: feature.xMm,
+        y: feature.yMm,
+        width: feature.widthMm,
+        length: feature.lengthMm,
+      })
     ) {
       errors.push(`${label}: 연결된 현장 요소가 공간 밖에 있습니다.`);
     }
@@ -466,7 +477,7 @@ export function calculateBase(
     throw new Error(errors.join("\n"));
   }
 
-  const areaM2 = (Number(site.widthMm) / 1000) * (Number(site.lengthMm) / 1000);
+  const { areaM2 } = getRoomGeometry(site);
 
   if (!Number.isFinite(areaM2) || areaM2 <= 0) {
     throw new Error("공간 면적이 계산 가능한 범위를 벗어났습니다.");

@@ -6,9 +6,11 @@ import {
   type CeilingFeatureType,
 } from "@/types/ceilplan";
 
+import type { SiteInput } from "@/types/ceilplan";
+import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
+
 interface FeatureInputPanelProps {
-  widthMm: string;
-  lengthMm: string;
+  inputs: SiteInput;
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
@@ -16,8 +18,7 @@ interface FeatureInputPanelProps {
 }
 
 export default function FeatureInputPanel({
-  widthMm,
-  lengthMm,
+  inputs,
   features,
   onAdd,
   onUpdate,
@@ -61,16 +62,10 @@ export default function FeatureInputPanel({
   }
 
   function handleSubmit() {
-    const roomWidth = Number(widthMm);
-    const roomLength = Number(lengthMm);
+    const room = tryGetRoomGeometry(inputs);
 
-    if (
-      !Number.isFinite(roomWidth) ||
-      !Number.isFinite(roomLength) ||
-      roomWidth <= 0 ||
-      roomLength <= 0
-    ) {
-      setError("먼저 공간 가로와 세로에 양수를 입력하세요.");
+    if (!room) {
+      setError("먼저 공간 형태와 치수를 올바르게 입력하세요.");
       return;
     }
 
@@ -103,8 +98,17 @@ export default function FeatureInputPanel({
       return;
     }
 
-    if (x + width > roomWidth || y + length > roomLength) {
-      setError("요소가 공간 밖으로 나갑니다. 위치와 크기를 확인하세요.");
+    if (
+      !isBoxInsideRoom(room, {
+        x,
+        y,
+        width,
+        length,
+      })
+    ) {
+      setError(
+        "요소가 공간 밖이나 제외 영역에 걸칩니다. 위치와 크기를 확인하세요.",
+      );
       return;
     }
 

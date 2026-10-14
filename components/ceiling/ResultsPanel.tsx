@@ -337,7 +337,9 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
             <div>
               <dt className="font-semibold">공간 면적</dt>
               <dd className="text-slate-600">
-                가로(mm) × 세로(mm) ÷ 1,000,000
+                직사각형은 가로 × 세로로 계산합니다. ㄱ자·ㄷ자는 제외 영역을
+                반영한 천장 영역의 면적을 사용합니다. 자세한 치수는 자재별 계산
+                근거에서 확인하세요.
               </dd>
             </div>
 

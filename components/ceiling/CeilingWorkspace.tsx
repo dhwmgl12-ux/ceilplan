@@ -25,6 +25,7 @@ import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
 import UsageGuide from "./UsageGuide";
+import { tryGetRoomGeometry } from "@/lib/geometry/room";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -90,27 +91,8 @@ export default function CeilingWorkspace() {
     return () => cancelAnimationFrame(frame);
   }, [errors]);
 
-  const width = Number(inputs.widthMm);
-  const length = Number(inputs.lengthMm);
-
-  const hasValidDimensions =
-    inputs.widthMm.trim() !== "" &&
-    inputs.lengthMm.trim() !== "" &&
-    Number.isFinite(width) &&
-    Number.isFinite(length) &&
-    width > 0 &&
-    length > 0;
-
-  const calculatedArea = hasValidDimensions
-    ? (width / 1000) * (length / 1000)
-    : null;
-
-  const areaM2 =
-    calculatedArea !== null &&
-    Number.isFinite(calculatedArea) &&
-    calculatedArea > 0
-      ? calculatedArea
-      : null;
+  const room = tryGetRoomGeometry(inputs);
+  const areaM2 = room?.areaM2 ?? null;
 
   function handleInputChange(field: keyof SiteInput, value: string) {
     setInputs((previous) => ({
@@ -179,7 +161,7 @@ export default function CeilingWorkspace() {
 
         // CeilPlan 내부 계산 정책 버전입니다.
         // 공식 시공 기준의 버전이 아닙니다.
-        calculationRuleVersion: "area-manual-adjustment-v1",
+        calculationRuleVersion: "shaped-area-manual-adjustment-v1",
 
         ...calculationInput,
         result: nextResult,
@@ -501,8 +483,7 @@ export default function CeilingWorkspace() {
 
               <div className="border-t border-slate-100">
                 <FeatureInputPanel
-                  widthMm={inputs.widthMm}
-                  lengthMm={inputs.lengthMm}
+                  inputs={inputs}
                   features={features}
                   onAdd={handleAddFeature}
                   onUpdate={handleUpdateFeature}
@@ -522,11 +503,7 @@ export default function CeilingWorkspace() {
           </div>
 
           <div id="preview" className="min-w-0">
-            <CeilingPreview
-              widthMm={inputs.widthMm}
-              lengthMm={inputs.lengthMm}
-              features={features}
-            />
+            <CeilingPreview inputs={inputs} features={features} />
           </div>
 
           <ResultsPanel snapshot={snapshot} stale={stale} />
