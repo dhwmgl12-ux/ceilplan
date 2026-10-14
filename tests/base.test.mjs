@@ -484,3 +484,120 @@ test("조정 원본을 변경하지 않고 계산 결과에 복사한다", () =>
   assert.equal(applied.featureType, "LIGHT_BOX");
   assert.equal(applied.convertedQuantity, 4);
 });
+
+function createRepeatedDeductions(quantity, count) {
+  return Array.from({ length: count }, (_, index) =>
+    createAdjustment({
+      id: `decimal-deduction-${index}`,
+      adjustmentType: "DEDUCT",
+      quantity,
+    }),
+  );
+}
+
+test("소수 공제 후 작은 양수 오차가 남아도 0본으로 처리한다", () => {
+  // 기본 12m - 0.1m × 120회 = 0m
+  const result = calculateAdjusted(createRepeatedDeductions(0.1, 120));
+
+  const mbar = result.materials[1];
+
+  assert.equal(mbar.quantityBeforeLoss, 0);
+  assert.equal(mbar.quantityAfterLoss, 0);
+  assert.equal(mbar.orderQuantity, 0);
+  assert.equal(mbar.orderedQuantity, 0);
+  assert.equal(mbar.roundingSurplus, 0);
+  assert.equal(mbar.estimatedCost, 0);
+});
+
+test("소수 공제 후 작은 음수 오차를 과도한 공제로 판단하지 않는다", () => {
+  // 기본 12m - 0.3m × 40회 = 0m
+  const result = calculateAdjusted(createRepeatedDeductions(0.3, 40));
+
+  const mbar = result.materials[1];
+
+  assert.equal(mbar.quantityBeforeLoss, 0);
+  assert.equal(mbar.orderQuantity, 0);
+});
+
+test("소수 추가와 공제를 함께 적용해도 최종 0을 유지한다", () => {
+  // 기본 12m + 0.1m + 0.2m - 12.3m = 0m
+  const result = calculateAdjusted([
+    createAdjustment({
+      id: "decimal-add-1",
+      quantity: 0.1,
+    }),
+    createAdjustment({
+      id: "decimal-add-2",
+      quantity: 0.2,
+    }),
+    createAdjustment({
+      id: "decimal-deduct",
+      adjustmentType: "DEDUCT",
+      quantity: 12.3,
+    }),
+  ]);
+
+  assert.equal(result.materials[1].quantityBeforeLoss, 0);
+  assert.equal(result.materials[1].orderQuantity, 0);
+});
+
+test("석고보드 소수 면적 공제에도 같은 경계 처리를 적용한다", () => {
+  const adjustments = createRepeatedDeductions(0.3, 40).map((adjustment) => ({
+    ...adjustment,
+    materialId: "BOARD",
+    unit: "㎡",
+  }));
+
+  // 기본 12㎡를 모두 공제합니다. 겹수가 달라도 최종 물량은 0입니다.
+  const result = calculateAdjusted(adjustments, {
+    layerCount: "2",
+    boardLossPercent: "7",
+  });
+
+  const board = result.materials[0];
+
+  assert.equal(board.quantityBeforeLoss, 0);
+  assert.equal(board.lossAmount, 0);
+  assert.equal(board.orderQuantity, 0);
+});
+
+test("연산 오차보다 큰 실제 잔량은 0으로 없애지 않는다", () => {
+  const result = calculateAdjusted([
+    createAdjustment({
+      adjustmentType: "DEDUCT",
+      quantity: 11.999999,
+    }),
+  ]);
+
+  const mbar = result.materials[1];
+
+  assert.ok(mbar.quantityBeforeLoss > 0);
+  approximatelyEqual(mbar.quantityBeforeLoss, 0.000001);
+  assert.equal(mbar.orderQuantity, 1);
+});
+
+test("연산 오차보다 큰 실제 초과 공제는 계속 거부한다", () => {
+  assert.throws(
+    () =>
+      calculateAdjusted([
+        createAdjustment({
+          adjustmentType: "DEDUCT",
+          quantity: 12.000001,
+        }),
+      ]),
+    /공제 수량/,
+  );
+});
+
+test("소수 전체 공제 후에도 단가 미입력은 null로 유지한다", () => {
+  const result = calculateAdjusted(createRepeatedDeductions(0.3, 40), {
+    mbarUnitPrice: "",
+  });
+
+  const mbar = result.materials[1];
+
+  assert.equal(mbar.orderQuantity, 0);
+  assert.equal(mbar.unitPrice, null);
+  assert.equal(mbar.estimatedCost, null);
+  assert.equal(result.totalEstimatedCost, null);
+});

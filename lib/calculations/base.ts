@@ -290,6 +290,28 @@ function applyAdjustments(
     throw new Error(`${name} 조정 후 물량이 계산 범위를 벗어났습니다.`);
   }
 
+  // 연산에 사용한 수량 크기와 누적 횟수를 기준으로
+  // 부동소수점 오차 범위를 추정합니다.
+  // 시공 허용 오차나 고정된 공제 허용량이 아닙니다.
+  const scale = Math.max(
+    Math.abs(theoreticalQuantity),
+    summary.addedQuantity,
+    summary.deductedQuantity,
+  );
+
+  const operationCount = summary.items.length + 4;
+
+  const tolerance = Number.EPSILON * scale * operationCount;
+
+  if (!Number.isFinite(tolerance)) {
+    throw new Error(`${name} 조정 연산이 처리 가능한 범위를 벗어났습니다.`);
+  }
+
+  // 상쇄 과정에서 생긴 극소량의 양수·음수 오차만 0으로 정리합니다.
+  if (Math.abs(quantityBeforeLoss) <= tolerance) {
+    return 0;
+  }
+
   if (quantityBeforeLoss < 0) {
     throw new Error(`${name}의 공제 수량이 사용 가능한 물량을 초과합니다.`);
   }
