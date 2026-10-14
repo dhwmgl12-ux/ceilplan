@@ -20,6 +20,8 @@ import { readProjects, saveProject } from "@/lib/project-storage";
 import { exportProjectJson, importProjectJson } from "@/lib/project-io";
 import { downloadText } from "@/lib/download";
 
+import { createExampleProject } from "@/lib/example-project";
+
 export interface ProjectManagerHandle {
   openList: () => void;
 }
@@ -29,7 +31,7 @@ interface ProjectManagerProps {
   siteInput: SiteInput;
   materialInput: MaterialInput;
   dirty: boolean;
-  onLoad: (project: Project, source: "storage" | "import") => void;
+  onLoad: (project: Project, source: "storage" | "import" | "example") => void;
   onNew: () => void;
   onSaved: () => void;
   features: CeilingFeature[];
@@ -169,6 +171,25 @@ export default function ProjectManager({
     setMessage("새 프로젝트를 시작합니다.");
   }
 
+  function handleLoadExample() {
+    if (!canReplaceInputs()) return;
+
+    const project = createExampleProject(
+      crypto.randomUUID(),
+      new Date().toISOString(),
+    );
+
+    onLoad(project, "example");
+
+    setProjectId(project.id);
+    setSavedAt(null);
+    setListOpen(false);
+    setError("");
+    setMessage(
+      "체험용 예시를 불러왔습니다. 모든 수치는 검산용이며 시공 권장값이나 실제 단가가 아닙니다. 계산 버튼을 눌러 결과를 확인하세요.",
+    );
+  }
+
   function handleExportJson() {
     setMessage("");
     setError("");
@@ -289,11 +310,11 @@ export default function ProjectManager({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={handleNew}
-            // 새 프로젝트 버튼
+            onClick={handleLoadExample}
+            disabled={importing}
             className="cp-button-secondary"
           >
-            새 프로젝트
+            예시 프로젝트 불러오기
           </button>
 
           <button

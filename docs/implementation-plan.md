@@ -25,6 +25,7 @@ ceilplan/
       ProjectManager.tsx
       ResultsPanel.tsx
       CalculationBreakdown.tsx
+      UsageGuide.tsx
 
   types/
     ceilplan.ts
@@ -36,12 +37,14 @@ ceilplan/
     project-io.ts
     result-csv.ts
     download.ts
+    example-project.ts
 
     tests/
     base.test.mjs
     project-io.test.mjs
     result-csv.test.mjs
     project-storage.test.mjs
+    example-project.test.mjs
 
   docs/
     product-spec.md

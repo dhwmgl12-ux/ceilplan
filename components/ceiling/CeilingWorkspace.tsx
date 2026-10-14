@@ -24,6 +24,7 @@ import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
 import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
+import UsageGuide from "./UsageGuide";
 
 export default function CeilingWorkspace() {
   const [inputs, setInputs] = useState<SiteInput>({
@@ -202,7 +203,10 @@ export default function CeilingWorkspace() {
     }
   }
 
-  function handleLoadProject(project: Project, source: "storage" | "import") {
+  function handleLoadProject(
+    project: Project,
+    source: "storage" | "import" | "example",
+  ) {
     setInputs({ ...project.siteInput });
     setMaterialInputs({ ...project.materialInput });
     setFeatures((project.features ?? []).map((feature) => ({ ...feature })));
@@ -220,7 +224,7 @@ export default function CeilingWorkspace() {
     setStale(Boolean(project.snapshot));
 
     // 불러온 데이터를 덮어쓰기 전에 확인받도록 보수적으로 표시합니다.
-    setDirty(source === "import");
+    setDirty(source !== "storage");
   }
 
   function handleNewProject() {
@@ -424,6 +428,10 @@ export default function CeilingWorkspace() {
         tabIndex={-1}
         className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6"
       >
+        <div className="mb-4">
+          <UsageGuide />
+        </div>
+
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div id="inputs" className="min-w-0 space-y-4">
             <InputPanel inputs={inputs} onChange={handleInputChange} />
