@@ -1,8 +1,15 @@
+import { useState } from "react";
+import {
+  useFeaturePointer,
+  type FeaturePointerMode,
+} from "@/hooks/useFeaturePointer";
+
 import {
   featureColors,
   featureLabels,
   type CeilingFeature,
   type SiteInput,
+  type CeilingFeatureType,
 } from "@/types/ceilplan";
 
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
@@ -10,12 +17,24 @@ import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
 interface CeilingPreviewProps {
   inputs: SiteInput;
   features: CeilingFeature[];
+  onAdd: (feature: CeilingFeature) => void;
+  onUpdate: (feature: CeilingFeature) => void;
 }
 
 export default function CeilingPreview({
   inputs,
   features,
+  onAdd,
+  onUpdate,
 }: CeilingPreviewProps) {
+  const [pointerMode, setPointerMode] = useState<FeaturePointerMode>("VIEW");
+
+  const [placementType, setPlacementType] =
+    useState<CeilingFeatureType>("AIR_CONDITIONER");
+
+  const [placementWidth, setPlacementWidth] = useState("");
+  const [placementLength, setPlacementLength] = useState("");
+
   const room = tryGetRoomGeometry(inputs);
   const width = room?.width ?? 0;
   const length = room?.length ?? 0;
@@ -55,6 +74,21 @@ export default function CeilingPreview({
   const dimensionY = y - 24;
   const dimensionX = x - 24;
 
+  const pointer = useFeaturePointer({
+    inputs,
+    features,
+    room,
+    x,
+    y,
+    scale,
+    mode: pointerMode,
+    featureType: placementType,
+    widthMm: placementWidth,
+    lengthMm: placementLength,
+    onAdd,
+    onUpdate,
+  });
+
   return (
     <section aria-labelledby="preview-title" className="cp-card min-h-80">
       <h2 id="preview-title" className="cp-title">
@@ -65,12 +99,129 @@ export default function CeilingPreview({
         입력한 공간 치수를 기준으로 표시한 2D 평면도입니다.
       </p>
 
+      <div className="mt-4 rounded-lg border border-slate-200 p-3">
+        <div
+          role="group"
+          aria-label="도면 조작 모드"
+          className="flex flex-wrap gap-2"
+        >
+          {(
+            [
+              ["VIEW", "보기"],
+              ["PLACE", "요소 배치"],
+              ["MOVE", "요소 이동"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={pointerMode === mode}
+              onClick={() => {
+                pointer.clearSession();
+                setPointerMode(mode);
+              }}
+              className={
+                pointerMode === mode
+                  ? "cp-button-primary"
+                  : "cp-button-secondary"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {pointerMode === "PLACE" && (
+          <div className="mt-4 space-y-3">
+            <label className="block text-sm font-medium">
+              배치할 요소
+              <select
+                value={placementType}
+                onChange={(event) => {
+                  pointer.clearSession();
+                  setPlacementType(event.target.value as CeilingFeatureType);
+                }}
+                className="cp-input mt-2"
+              >
+                {Object.entries(featureLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-sm font-medium">
+                가로 (mm)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={placementWidth}
+                  onChange={(event) => {
+                    pointer.clearSession();
+                    setPlacementWidth(event.target.value);
+                  }}
+                  className="cp-input mt-2"
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                세로 (mm)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={placementLength}
+                  onChange={(event) => {
+                    pointer.clearSession();
+                    setPlacementLength(event.target.value);
+                  }}
+                  className="cp-input mt-2"
+                />
+              </label>
+            </div>
+          </div>
+        )}
+
+        <p
+          id="preview-pointer-help"
+          className="mt-3 text-xs leading-5 text-slate-500"
+        >
+          {pointerMode === "VIEW"
+            ? "보기 모드에서는 모바일 화면을 스크롤할 수 있습니다."
+            : pointerMode === "PLACE"
+              ? "크기를 입력하고 도면을 클릭·터치하세요. 선택한 지점이 요소 중심입니다."
+              : "이동할 도형을 누른 채 끌어 놓으세요. 정밀한 위치·크기는 현장 요소 목록에서 수정할 수 있습니다."}
+        </p>
+
+        <p role="status" className="mt-2 text-xs leading-5 text-blue-700">
+          {pointer.message}
+        </p>
+      </div>
+
       {isValid ? (
         <svg
           viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
           className="mt-4 block w-full"
           role="img"
           aria-labelledby="room-title room-description"
+          aria-describedby="preview-pointer-help"
+          style={{
+            touchAction: pointerMode === "VIEW" ? "auto" : "none",
+            cursor:
+              pointerMode === "PLACE"
+                ? "crosshair"
+                : pointerMode === "MOVE"
+                  ? "grab"
+                  : "default",
+          }}
+          onPointerDown={pointer.handlePointerDown}
+          onPointerMove={pointer.handlePointerMove}
+          onPointerUp={pointer.handlePointerUp}
+          onPointerCancel={pointer.handlePointerCancel}
+          onLostPointerCapture={pointer.handlePointerCancel}
         >
           <title id="room-title">천장 공간 외곽 형태</title>
 
@@ -110,7 +261,7 @@ export default function CeilingPreview({
             const hasRoomForDetails = featureWidth >= 24 && featureHeight >= 18;
 
             return (
-              <g key={feature.id}>
+              <g key={feature.id} data-feature-id={feature.id}>
                 <title>
                   {number}번 {label}: X {feature.xMm}, Y {feature.yMm} mm, 크기{" "}
                   {feature.widthMm} × {feature.lengthMm} mm
@@ -361,6 +512,22 @@ export default function CeilingPreview({
               );
             })}
           </g>
+
+          {pointer.draft && (
+            <rect
+              x={x + pointer.draft.xMm * scale}
+              y={y + pointer.draft.yMm * scale}
+              width={pointer.draft.widthMm * scale}
+              height={pointer.draft.lengthMm * scale}
+              fill={pointer.draftValid ? "#2563eb" : "#dc2626"}
+              fillOpacity={0.15}
+              stroke={pointer.draftValid ? "#2563eb" : "#dc2626"}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              pointerEvents="none"
+              aria-hidden="true"
+            />
+          )}
         </svg>
       ) : (
         <div

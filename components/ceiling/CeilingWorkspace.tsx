@@ -589,7 +589,13 @@ export default function CeilingWorkspace() {
           </div>
 
           <div id="preview" className="min-w-0">
-            <CeilingPreview inputs={inputs} features={features} />
+            <CeilingPreview
+              key={featureFormKey}
+              inputs={inputs}
+              features={features}
+              onAdd={handleAddFeature}
+              onUpdate={handleUpdateFeature}
+            />
           </div>
 
           <ResultsPanel snapshot={snapshot} stale={stale} />
