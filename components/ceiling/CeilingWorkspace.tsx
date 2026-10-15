@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import type {
   Adjustment,
   CalculationSnapshot,
@@ -26,37 +26,67 @@ import FeatureInputPanel from "./FeatureInputPanel";
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
 import UsageGuide from "./UsageGuide";
 import { tryGetRoomGeometry } from "@/lib/geometry/room";
+import {
+  createEditorHistory,
+  editorHistoryReducer,
+} from "@/lib/editor-history";
+
+interface WorkspaceDocument {
+  inputs: SiteInput;
+  materialInputs: MaterialInput;
+  features: CeilingFeature[];
+  adjustments: Adjustment[];
+}
+
+function createEmptyDocument(): WorkspaceDocument {
+  return {
+    inputs: {
+      name: "",
+      widthMm: "",
+      lengthMm: "",
+    },
+
+    materialInputs: {
+      mbarSpacingMm: "",
+      carryingSpacingMm: "",
+      boardWidthMm: "",
+      boardLengthMm: "",
+      layerCount: "",
+      boardLossPercent: "",
+      metalLossPercent: "",
+      mbarStockLengthMm: "",
+      carryingStockLengthMm: "",
+      boardUnitPrice: "",
+      mbarUnitPrice: "",
+      carryingUnitPrice: "",
+    },
+
+    features: [],
+    adjustments: [],
+  };
+}
 
 export default function CeilingWorkspace() {
-  const [inputs, setInputs] = useState<SiteInput>({
-    name: "",
-    widthMm: "",
-    lengthMm: "",
-  });
+  const [history, dispatchHistory] = useReducer(
+    editorHistoryReducer<WorkspaceDocument>,
+    undefined,
+    () => createEditorHistory(createEmptyDocument()),
+  );
+
+  const { inputs, materialInputs, features, adjustments } = history.present;
+
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
+
   const [dirty, setDirty] = useState(false);
-
-  const [materialInputs, setMaterialInputs] = useState<MaterialInput>({
-    mbarSpacingMm: "",
-    carryingSpacingMm: "",
-    boardWidthMm: "",
-    boardLengthMm: "",
-    layerCount: "",
-    boardLossPercent: "",
-    metalLossPercent: "",
-    mbarStockLengthMm: "",
-    carryingStockLengthMm: "",
-    boardUnitPrice: "",
-    mbarUnitPrice: "",
-    carryingUnitPrice: "",
-  });
-
   const [snapshot, setSnapshot] = useState<CalculationSnapshot | null>(null);
+
   const result = snapshot?.result ?? null;
+
   const [errors, setErrors] = useState<string[]>([]);
   const [stale, setStale] = useState(false);
-  const [features, setFeatures] = useState<CeilingFeature[]>([]);
-  const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [featureFormKey, setFeatureFormKey] = useState(0);
+  const [historyMessage, setHistoryMessage] = useState("");
 
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
@@ -95,31 +125,23 @@ export default function CeilingWorkspace() {
   const areaM2 = room?.areaM2 ?? null;
 
   function handleInputChange(field: keyof SiteInput, value: string) {
-    setInputs((previous) => ({
+    changeDocument((previous) => ({
       ...previous,
-      [field]: value,
+      inputs: {
+        ...previous.inputs,
+        [field]: value,
+      },
     }));
-
-    setDirty(true);
-    setErrors([]);
-
-    if (result) {
-      setStale(true);
-    }
   }
 
   function handleMaterialChange(field: keyof MaterialInput, value: string) {
-    setMaterialInputs((previous) => ({
+    changeDocument((previous) => ({
       ...previous,
-      [field]: value,
+      materialInputs: {
+        ...previous.materialInputs,
+        [field]: value,
+      },
     }));
-
-    setDirty(true);
-    setErrors([]);
-
-    if (result) {
-      setStale(true);
-    }
   }
 
   function handleCalculate() {
@@ -189,46 +211,34 @@ export default function CeilingWorkspace() {
     project: Project,
     source: "storage" | "import" | "example",
   ) {
-    setInputs({ ...project.siteInput });
-    setMaterialInputs({ ...project.materialInput });
-    setFeatures((project.features ?? []).map((feature) => ({ ...feature })));
-    setAdjustments(
-      (project.adjustments ?? []).map((adjustment) => ({
-        ...adjustment,
-      })),
-    );
+    dispatchHistory({
+      type: "reset",
+      value: {
+        inputs: { ...project.siteInput },
+        materialInputs: { ...project.materialInput },
+        features: (project.features ?? []).map((feature) => ({
+          ...feature,
+        })),
+        adjustments: (project.adjustments ?? []).map((adjustment) => ({
+          ...adjustment,
+        })),
+      },
+    });
+
     setFeatureFormKey((previous) => previous + 1);
 
     setSnapshot(project.snapshot ? structuredClone(project.snapshot) : null);
+
     setErrors([]);
-
-    // 외부에서 가져오거나 저장에서 복원한 결과는 다시 계산하게 합니다.
     setStale(Boolean(project.snapshot));
-
-    // 불러온 데이터를 덮어쓰기 전에 확인받도록 보수적으로 표시합니다.
     setDirty(source !== "storage");
+    setHistoryMessage("");
   }
 
   function handleNewProject() {
-    setInputs({
-      name: "",
-      widthMm: "",
-      lengthMm: "",
-    });
-
-    setMaterialInputs({
-      mbarSpacingMm: "",
-      carryingSpacingMm: "",
-      boardWidthMm: "",
-      boardLengthMm: "",
-      layerCount: "",
-      boardLossPercent: "",
-      metalLossPercent: "",
-      mbarStockLengthMm: "",
-      carryingStockLengthMm: "",
-      boardUnitPrice: "",
-      mbarUnitPrice: "",
-      carryingUnitPrice: "",
+    dispatchHistory({
+      type: "reset",
+      value: createEmptyDocument(),
     });
 
     setFeatureFormKey((previous) => previous + 1);
@@ -237,8 +247,7 @@ export default function CeilingWorkspace() {
     setErrors([]);
     setStale(false);
     setDirty(false);
-    setFeatures([]);
-    setAdjustments([]);
+    setHistoryMessage("");
   }
 
   function markCalculationChanged() {
@@ -250,20 +259,32 @@ export default function CeilingWorkspace() {
     }
   }
 
-  function handleAddFeature(feature: CeilingFeature) {
-    setFeatures((previous) => [...previous, feature]);
+  function changeDocument(
+    update: (previous: WorkspaceDocument) => WorkspaceDocument,
+  ) {
+    dispatchHistory({
+      type: "change",
+      update,
+    });
+
+    setHistoryMessage("");
     markCalculationChanged();
   }
 
+  function handleAddFeature(feature: CeilingFeature) {
+    changeDocument((previous) => ({
+      ...previous,
+      features: [...previous.features, { ...feature }],
+    }));
+  }
+
   function handleUpdateFeature(nextFeature: CeilingFeature) {
-    setFeatures((previous) =>
-      previous.map((feature) =>
+    changeDocument((previous) => ({
+      ...previous,
+      features: previous.features.map((feature) =>
         feature.id === nextFeature.id ? { ...nextFeature } : feature,
       ),
-    );
-
-    // 요소 ID를 유지하므로 연결된 조정값도 유지됩니다.
-    markCalculationChanged();
+    }));
   }
 
   function handleDeleteFeature(id: string) {
@@ -280,38 +301,64 @@ export default function CeilingWorkspace() {
       return;
     }
 
-    setFeatures((previous) => previous.filter((feature) => feature.id !== id));
-
-    setAdjustments((previous) =>
-      previous.filter((adjustment) => adjustment.featureId !== id),
-    );
-
-    markCalculationChanged();
+    // 요소와 연결된 조정값 삭제를 하나의 변경으로 기록합니다.
+    changeDocument((previous) => ({
+      ...previous,
+      features: previous.features.filter((feature) => feature.id !== id),
+      adjustments: previous.adjustments.filter(
+        (adjustment) => adjustment.featureId !== id,
+      ),
+    }));
   }
 
   function handleAddAdjustment(adjustment: Adjustment) {
-    setAdjustments((previous) => [...previous, adjustment]);
-    markCalculationChanged();
+    changeDocument((previous) => ({
+      ...previous,
+      adjustments: [...previous.adjustments, { ...adjustment }],
+    }));
   }
 
   function handleUpdateAdjustment(nextAdjustment: Adjustment) {
-    setAdjustments((previous) =>
-      previous.map((adjustment) =>
+    changeDocument((previous) => ({
+      ...previous,
+      adjustments: previous.adjustments.map((adjustment) =>
         adjustment.id === nextAdjustment.id
           ? { ...nextAdjustment }
           : adjustment,
       ),
-    );
-
-    markCalculationChanged();
+    }));
   }
 
   function handleDeleteAdjustment(id: string) {
-    setAdjustments((previous) =>
-      previous.filter((adjustment) => adjustment.id !== id),
-    );
+    changeDocument((previous) => ({
+      ...previous,
+      adjustments: previous.adjustments.filter(
+        (adjustment) => adjustment.id !== id,
+      ),
+    }));
+  }
+
+  function handleUndo() {
+    if (!canUndo) return;
+
+    dispatchHistory({ type: "undo" });
+
+    // 요소·조정값 패널의 수정 중 임시 입력을 초기화합니다.
+    setFeatureFormKey((previous) => previous + 1);
 
     markCalculationChanged();
+    setHistoryMessage("직전 편집을 취소했습니다.");
+  }
+
+  function handleRedo() {
+    if (!canRedo) return;
+
+    dispatchHistory({ type: "redo" });
+
+    setFeatureFormKey((previous) => previous + 1);
+
+    markCalculationChanged();
+    setHistoryMessage("취소한 편집을 다시 적용했습니다.");
   }
 
   const projectManagerRef = useRef<ProjectManagerHandle>(null);
@@ -412,6 +459,45 @@ export default function CeilingWorkspace() {
       >
         <div className="mb-4">
           <UsageGuide />
+        </div>
+
+        <div className="mb-4">
+          <UsageGuide />
+        </div>
+
+        <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
+          <div
+            role="group"
+            aria-label="편집 이력"
+            className="flex flex-wrap gap-2"
+          >
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="cp-button-secondary"
+            >
+              실행 취소
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="cp-button-secondary"
+            >
+              다시 실행
+            </button>
+          </div>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            적용된 입력과 요소 변경을 되돌립니다. 수정 중인 임시 입력은
+            초기화되며, 계산 결과는 다시 계산해야 합니다.
+          </p>
+
+          <p role="status" className="mt-1 text-xs text-blue-700">
+            {historyMessage}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
