@@ -2,10 +2,15 @@ import type { SiteInput } from "@/types/ceilplan";
 
 interface InputPanelProps {
   inputs: SiteInput;
+  nameLabel?: string;
   onChange: (field: keyof SiteInput, value: string) => void;
 }
 
-export default function InputPanel({ inputs, onChange }: InputPanelProps) {
+export default function InputPanel({
+  inputs,
+  onChange,
+  nameLabel = "현장명",
+}: InputPanelProps) {
   return (
     <section aria-labelledby="input-title" className="cp-card min-h-80">
       <h2 id="input-title" className="cp-title">
@@ -14,7 +19,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
 
       <div className="mt-5 space-y-4">
         <label className="block text-sm font-medium">
-          현장명
+          {nameLabel}
           <input
             type="text"
             value={inputs.name}

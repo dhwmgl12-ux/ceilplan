@@ -310,6 +310,14 @@ export default function ProjectManager({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={handleNew}
+            disabled={importing}
+            className="cp-button-secondary"
+          >
+            새 프로젝트
+          </button>
+          <button
+            type="button"
             onClick={handleLoadExample}
             disabled={importing}
             className="cp-button-secondary"

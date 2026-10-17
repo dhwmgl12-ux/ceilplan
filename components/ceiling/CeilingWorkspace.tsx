@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useReducer,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import type {
   Adjustment,
   CalculationSnapshot,
@@ -30,6 +37,21 @@ import {
   createEditorHistory,
   editorHistoryReducer,
 } from "@/lib/editor-history";
+
+import type { CeilingSpace } from "@/types/housing-project";
+
+export interface SpaceEditorHandle {
+  readSpace: () => CeilingSpace | null;
+}
+
+interface CeilingWorkspaceProps {
+  ref?: Ref<SpaceEditorHandle>;
+
+  spaceSession?: {
+    initialSpace: CeilingSpace;
+    onEdit: () => void;
+  };
+}
 
 interface WorkspaceDocument {
   inputs: SiteInput;
@@ -66,11 +88,27 @@ function createEmptyDocument(): WorkspaceDocument {
   };
 }
 
-export default function CeilingWorkspace() {
+export default function CeilingWorkspace({
+  ref,
+  spaceSession,
+}: CeilingWorkspaceProps) {
+  const initialSpace = spaceSession?.initialSpace;
+  const isSpaceEditor = Boolean(spaceSession);
+
   const [history, dispatchHistory] = useReducer(
     editorHistoryReducer<WorkspaceDocument>,
     undefined,
-    () => createEditorHistory(createEmptyDocument()),
+    () =>
+      createEditorHistory(
+        initialSpace
+          ? {
+              inputs: initialSpace.siteInput,
+              materialInputs: initialSpace.materialInput,
+              features: initialSpace.features,
+              adjustments: initialSpace.adjustments,
+            }
+          : createEmptyDocument(),
+      ),
   );
 
   const { inputs, materialInputs, features, adjustments } = history.present;
@@ -79,14 +117,33 @@ export default function CeilingWorkspace() {
   const canRedo = history.future.length > 0;
 
   const [dirty, setDirty] = useState(false);
-  const [snapshot, setSnapshot] = useState<CalculationSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<CalculationSnapshot | null>(() =>
+    initialSpace?.snapshot ? structuredClone(initialSpace.snapshot) : null,
+  );
 
   const result = snapshot?.result ?? null;
 
   const [errors, setErrors] = useState<string[]>([]);
-  const [stale, setStale] = useState(false);
+  const [stale, setStale] = useState(Boolean(initialSpace?.snapshot));
   const [featureFormKey, setFeatureFormKey] = useState(0);
   const [historyMessage, setHistoryMessage] = useState("");
+
+  const editingSpaceId = initialSpace?.id;
+
+  useImperativeHandle(ref, () => ({
+    readSpace() {
+      if (!editingSpaceId) return null;
+
+      return structuredClone({
+        id: editingSpaceId,
+        siteInput: inputs,
+        materialInput: materialInputs,
+        features,
+        adjustments,
+        snapshot,
+      });
+    },
+  }));
 
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
     null,
@@ -132,7 +189,8 @@ export default function CeilingWorkspace() {
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!dirty) return;
+    // 다중 공간 화면의 이탈 확인은 부모가 담당합니다.
+    if (isSpaceEditor || !dirty) return;
 
     function handleBeforeUnload(event: BeforeUnloadEvent) {
       event.preventDefault();
@@ -144,7 +202,7 @@ export default function CeilingWorkspace() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [dirty]);
+  }, [dirty, isSpaceEditor]);
 
   useEffect(() => {
     if (errors.length === 0) return;
@@ -234,6 +292,7 @@ export default function CeilingWorkspace() {
       setErrors([]);
       setStale(false);
       setDirty(true);
+      spaceSession?.onEdit();
 
       moveAfterCalculation("results");
     } catch (error) {
@@ -296,6 +355,7 @@ export default function CeilingWorkspace() {
   function markCalculationChanged() {
     setDirty(true);
     setErrors([]);
+    spaceSession?.onEdit();
 
     if (result) {
       setStale(true);
@@ -453,21 +513,36 @@ export default function CeilingWorkspace() {
         본문으로 바로가기
       </a>
 
-      <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
-      <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
-        <ProjectManager
-          ref={projectManagerRef}
-          siteInput={inputs}
-          materialInput={materialInputs}
-          features={features}
-          adjustments={adjustments}
-          snapshot={snapshot}
-          dirty={dirty}
-          onLoad={handleLoadProject}
-          onNew={handleNewProject}
-          onSaved={() => setDirty(false)}
-        />
-      </ProjectHeader>
+      {isSpaceEditor ? (
+        <header className="border-b border-blue-100 bg-white px-4 py-4 sm:px-6">
+          <h2 className="text-xl font-bold">
+            공간 편집: {inputs.name.trim() || "이름 없는 공간"}
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            이 영역의 결과는 선택한 공간 한 개·한 세대 기준입니다.
+          </p>
+        </header>
+      ) : (
+        <>
+          <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
+
+          <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
+            <ProjectManager
+              ref={projectManagerRef}
+              siteInput={inputs}
+              materialInput={materialInputs}
+              features={features}
+              adjustments={adjustments}
+              snapshot={snapshot}
+              dirty={dirty}
+              onLoad={handleLoadProject}
+              onNew={handleNewProject}
+              onSaved={() => setDirty(false)}
+            />
+          </ProjectHeader>
+        </>
+      )}
 
       <nav
         aria-label="작업 영역 바로가기"
@@ -503,9 +578,11 @@ export default function CeilingWorkspace() {
         tabIndex={-1}
         className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6"
       >
-        <div className="mb-4">
-          <UsageGuide />
-        </div>
+        {!isSpaceEditor && (
+          <div className="mb-4">
+            <UsageGuide />
+          </div>
+        )}
 
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
           <div
@@ -544,7 +621,11 @@ export default function CeilingWorkspace() {
 
         <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
           <div id="inputs" className="min-w-0 space-y-4">
-            <InputPanel inputs={inputs} onChange={handleInputChange} />
+            <InputPanel
+              inputs={inputs}
+              onChange={handleInputChange}
+              nameLabel={isSpaceEditor ? "공간명" : "현장명"}
+            />
 
             <MaterialInputPanel
               inputs={materialInputs}
