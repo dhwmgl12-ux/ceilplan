@@ -25,6 +25,7 @@ interface FeaturePointerOptions {
   inputs: SiteInput;
   features: CeilingFeature[];
   room: RoomGeometry | null;
+  onSelectFeature: (id: string | null) => void;
 
   // SVG 안에서 공간이 표시되는 위치와 배율
   x: number;
@@ -53,6 +54,7 @@ export function useFeaturePointer({
   lengthMm,
   onAdd,
   onUpdate,
+  onSelectFeature,
 }: FeaturePointerOptions) {
   const sessionRef = useRef<PointerSession | null>(null);
 
@@ -187,6 +189,7 @@ export function useFeaturePointer({
       }
 
       original = { ...feature };
+      onSelectFeature(feature.id);
     }
 
     const session: PointerSession = {

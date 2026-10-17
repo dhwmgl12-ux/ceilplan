@@ -10,6 +10,7 @@ import {
   type CeilingFeature,
   type SiteInput,
   type CeilingFeatureType,
+  type Adjustment,
 } from "@/types/ceilplan";
 
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
@@ -19,11 +20,19 @@ interface CeilingPreviewProps {
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
+  adjustments: Adjustment[];
+  activeFeatureId: string | null;
+  onSelectFeature: (id: string | null) => void;
+  onShowSelectedInList: () => void;
 }
 
 export default function CeilingPreview({
   inputs,
   features,
+  adjustments,
+  activeFeatureId,
+  onSelectFeature,
+  onShowSelectedInList,
   onAdd,
   onUpdate,
 }: CeilingPreviewProps) {
@@ -87,7 +96,20 @@ export default function CeilingPreview({
     lengthMm: placementLength,
     onAdd,
     onUpdate,
+    onSelectFeature,
   });
+
+  const selectedFeature = features.find(
+    (feature) => feature.id === activeFeatureId,
+  );
+
+  const selectedFeatureNumber = selectedFeature
+    ? features.findIndex((feature) => feature.id === selectedFeature.id) + 1
+    : null;
+
+  const linkedAdjustments = adjustments.filter(
+    (adjustment) => adjustment.featureId === activeFeatureId,
+  );
 
   return (
     <section aria-labelledby="preview-title" className="cp-card min-h-80">
@@ -190,10 +212,10 @@ export default function CeilingPreview({
           className="mt-3 text-xs leading-5 text-slate-500"
         >
           {pointerMode === "VIEW"
-            ? "보기 모드에서는 모바일 화면을 스크롤할 수 있습니다."
+            ? "도형을 클릭·터치하면 목록과 연결된 조정값이 강조됩니다. 키보드로 도형에 이동한 뒤 Enter 또는 Space로 선택할 수도 있습니다."
             : pointerMode === "PLACE"
               ? "크기를 입력하고 도면을 클릭·터치하세요. 선택한 지점이 요소 중심입니다."
-              : "이동할 도형을 누른 채 끌어 놓으세요. 정밀한 위치·크기는 현장 요소 목록에서 수정할 수 있습니다."}
+              : "이동할 도형을 누른 채 끌어 놓으세요. 해당 요소도 함께 선택됩니다."}
         </p>
 
         <p role="status" className="mt-2 text-xs leading-5 text-blue-700">
@@ -201,11 +223,81 @@ export default function CeilingPreview({
         </p>
       </div>
 
+      {selectedFeature && (
+        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">
+                선택: {selectedFeatureNumber}번{" "}
+                {featureLabels[selectedFeature.type]}
+              </h3>
+
+              <p className="mt-2 text-xs leading-5 text-slate-600">
+                X {selectedFeature.xMm}, Y {selectedFeature.yMm} mm
+                <br />
+                가로 {selectedFeature.widthMm} × 세로 {selectedFeature.lengthMm}{" "}
+                mm
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onSelectFeature(null)}
+              className="cp-button-secondary"
+            >
+              선택 해제
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onShowSelectedInList}
+            className="cp-button-secondary mt-3"
+          >
+            요소 목록으로 이동
+          </button>
+
+          <h4 className="mt-4 text-xs font-semibold">
+            연결된 조정값 {linkedAdjustments.length}개
+          </h4>
+
+          {linkedAdjustments.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">
+              연결된 조정값이 없습니다.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {linkedAdjustments.map((adjustment) => (
+                <li
+                  key={adjustment.id}
+                  className="rounded bg-white p-2 text-xs leading-5"
+                >
+                  <p className="font-medium">
+                    {adjustment.materialId === "BOARD"
+                      ? "석고보드"
+                      : adjustment.materialId === "MBAR"
+                        ? "M-BAR"
+                        : "캐링채널"}
+                    {" · "}
+                    {adjustment.adjustmentType === "ADD" ? "추가" : "공제"}{" "}
+                    {adjustment.quantity} {adjustment.unit}
+                  </p>
+
+                  <p className="break-words text-slate-600">
+                    {adjustment.memo}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {isValid ? (
         <svg
           viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
           className="mt-4 block w-full"
-          role="img"
+          role="group"
           aria-labelledby="room-title room-description"
           aria-describedby="preview-pointer-help"
           style={{
@@ -216,6 +308,18 @@ export default function CeilingPreview({
                 : pointerMode === "MOVE"
                   ? "grab"
                   : "default",
+          }}
+          onClick={(event) => {
+            if (pointerMode !== "VIEW") return;
+
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+
+            const id = target
+              .closest("[data-feature-id]")
+              ?.getAttribute("data-feature-id");
+
+            onSelectFeature(id ?? null);
           }}
           onPointerDown={pointer.handlePointerDown}
           onPointerMove={pointer.handlePointerMove}
@@ -261,11 +365,43 @@ export default function CeilingPreview({
             const hasRoomForDetails = featureWidth >= 24 && featureHeight >= 18;
 
             return (
-              <g key={feature.id} data-feature-id={feature.id}>
+              <g
+                key={feature.id}
+                data-feature-id={feature.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${number}번 ${label} 선택`}
+                aria-pressed={activeFeatureId === feature.id}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  pointer.clearSession();
+                  onSelectFeature(feature.id);
+                }}
+              >
                 <title>
                   {number}번 {label}: X {feature.xMm}, Y {feature.yMm} mm, 크기{" "}
                   {feature.widthMm} × {feature.lengthMm} mm
                 </title>
+
+                {activeFeatureId === feature.id && (
+                  <rect
+                    x={featureX - 4}
+                    y={featureY - 4}
+                    width={Math.max(featureWidth, 1) + 8}
+                    height={Math.max(featureHeight, 1) + 8}
+                    rx={3}
+                    fill="none"
+                    stroke="#0f172a"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    pointerEvents="none"
+                    aria-hidden="true"
+                  />
+                )}
 
                 {feature.type === "SPRINKLER" ? (
                   <>

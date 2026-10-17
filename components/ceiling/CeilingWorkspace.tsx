@@ -88,6 +88,47 @@ export default function CeilingWorkspace() {
   const [featureFormKey, setFeatureFormKey] = useState(0);
   const [historyMessage, setHistoryMessage] = useState("");
 
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
+    null,
+  );
+
+  // 삭제된 요소의 ID는 선택된 것으로 취급하지 않습니다.
+  const activeFeatureId = features.some(
+    (feature) => feature.id === selectedFeatureId,
+  )
+    ? selectedFeatureId
+    : null;
+
+  const featureDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  function handleSelectFeature(id: string | null) {
+    if (id !== null && !features.some((feature) => feature.id === id)) {
+      return;
+    }
+
+    setSelectedFeatureId(id);
+  }
+
+  function handleShowSelectedInList() {
+    if (!activeFeatureId) return;
+
+    if (featureDetailsRef.current) {
+      featureDetailsRef.current.open = true;
+    }
+
+    requestAnimationFrame(() => {
+      const button = document.getElementById(
+        `feature-select-${activeFeatureId}`,
+      );
+
+      button?.focus({ preventScroll: true });
+      button?.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+    });
+  }
+
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,6 +274,7 @@ export default function CeilingWorkspace() {
     setStale(Boolean(project.snapshot));
     setDirty(source !== "storage");
     setHistoryMessage("");
+    setSelectedFeatureId(null);
   }
 
   function handleNewProject() {
@@ -248,6 +290,7 @@ export default function CeilingWorkspace() {
     setStale(false);
     setDirty(false);
     setHistoryMessage("");
+    setSelectedFeatureId(null);
   }
 
   function markCalculationChanged() {
@@ -276,6 +319,7 @@ export default function CeilingWorkspace() {
       ...previous,
       features: [...previous.features, { ...feature }],
     }));
+    setSelectedFeatureId(feature.id);
   }
 
   function handleUpdateFeature(nextFeature: CeilingFeature) {
@@ -348,6 +392,7 @@ export default function CeilingWorkspace() {
 
     markCalculationChanged();
     setHistoryMessage("직전 편집을 취소했습니다.");
+    setSelectedFeatureId(null);
   }
 
   function handleRedo() {
@@ -359,6 +404,7 @@ export default function CeilingWorkspace() {
 
     markCalculationChanged();
     setHistoryMessage("취소한 편집을 다시 적용했습니다.");
+    setSelectedFeatureId(null);
   }
 
   const projectManagerRef = useRef<ProjectManagerHandle>(null);
@@ -461,10 +507,6 @@ export default function CeilingWorkspace() {
           <UsageGuide />
         </div>
 
-        <div className="mb-4">
-          <UsageGuide />
-        </div>
-
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
           <div
             role="group"
@@ -554,6 +596,7 @@ export default function CeilingWorkspace() {
               </p>
             </div>
             <details
+              ref={featureDetailsRef}
               key={featureFormKey}
               className="group rounded-xl border border-slate-200 bg-white"
             >
@@ -571,6 +614,8 @@ export default function CeilingWorkspace() {
                 <FeatureInputPanel
                   inputs={inputs}
                   features={features}
+                  activeFeatureId={activeFeatureId}
+                  onSelectFeature={handleSelectFeature}
                   onAdd={handleAddFeature}
                   onUpdate={handleUpdateFeature}
                   onDelete={handleDeleteFeature}
@@ -582,6 +627,8 @@ export default function CeilingWorkspace() {
               key={`adjustments-${featureFormKey}`}
               features={features}
               adjustments={adjustments}
+              activeFeatureId={activeFeatureId}
+              onSelectFeature={handleSelectFeature}
               onAdd={handleAddAdjustment}
               onUpdate={handleUpdateAdjustment}
               onDelete={handleDeleteAdjustment}
@@ -593,6 +640,10 @@ export default function CeilingWorkspace() {
               key={featureFormKey}
               inputs={inputs}
               features={features}
+              adjustments={adjustments}
+              activeFeatureId={activeFeatureId}
+              onSelectFeature={handleSelectFeature}
+              onShowSelectedInList={handleShowSelectedInList}
               onAdd={handleAddFeature}
               onUpdate={handleUpdateFeature}
             />

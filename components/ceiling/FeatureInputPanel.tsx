@@ -15,6 +15,8 @@ interface FeatureInputPanelProps {
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
   onDelete: (id: string) => void;
+  activeFeatureId: string | null;
+  onSelectFeature: (id: string | null) => void;
 }
 
 export default function FeatureInputPanel({
@@ -23,6 +25,8 @@ export default function FeatureInputPanel({
   onAdd,
   onUpdate,
   onDelete,
+  activeFeatureId,
+  onSelectFeature,
 }: FeatureInputPanelProps) {
   const [type, setType] = useState<CeilingFeatureType>("AIR_CONDITIONER");
 
@@ -36,6 +40,9 @@ export default function FeatureInputPanel({
   const [error, setError] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginal, setEditingOriginal] = useState<CeilingFeature | null>(
+    null,
+  );
 
   function resetForm() {
     setEditingId(null);
@@ -47,9 +54,11 @@ export default function FeatureInputPanel({
       lengthMm: "",
     });
     setError("");
+    setEditingOriginal(null);
   }
 
   function startEditing(feature: CeilingFeature) {
+    onSelectFeature(feature.id);
     setEditingId(feature.id);
     setType(feature.type);
     setDraft({
@@ -59,6 +68,7 @@ export default function FeatureInputPanel({
       lengthMm: String(feature.lengthMm),
     });
     setError("");
+    setEditingOriginal({ ...feature });
   }
 
   function handleSubmit() {
@@ -75,6 +85,20 @@ export default function FeatureInputPanel({
     ) {
       setError("수정 중인 요소가 삭제되었습니다. 수정 취소를 눌러주세요.");
       return;
+    }
+
+    if (editingId !== null && editingOriginal) {
+      const current = features.find((feature) => feature.id === editingId);
+
+      if (
+        current &&
+        JSON.stringify(current) !== JSON.stringify(editingOriginal)
+      ) {
+        setError(
+          "수정 중 도면 이동 등으로 원본 요소가 변경되었습니다. 수정 취소 후 다시 수정 버튼을 눌러 최신 값을 불러오세요.",
+        );
+        return;
+      }
     }
 
     if (Object.values(draft).some((value) => !value.trim())) {
@@ -199,8 +223,9 @@ export default function FeatureInputPanel({
 
       {editingId !== null && (
         <p role="status" className="mt-3 text-xs leading-5 text-blue-700">
-          선택한 요소를 수정 중입니다. 수정 적용을 눌러야 반영됩니다. 연결된
-          조정값은 자동으로 변경되지 않습니다.
+          {features.findIndex((feature) => feature.id === editingId) + 1}번
+          요소를 수정 중입니다. 수정 적용을 눌러야 반영됩니다. 다른 요소를
+          선택해도 이 수정 폼의 대상은 바뀌지 않습니다.
         </p>
       )}
 
@@ -228,7 +253,11 @@ export default function FeatureInputPanel({
         {features.map((feature, index) => (
           <li
             key={feature.id}
-            className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 p-3"
+            className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
+              activeFeatureId === feature.id
+                ? "border-blue-500 bg-blue-50"
+                : "border-transparent bg-slate-50"
+            }`}
           >
             <div>
               <p
@@ -246,6 +275,17 @@ export default function FeatureInputPanel({
             </div>
 
             <div className="flex shrink-0 flex-col gap-2">
+              <button
+                id={`feature-select-${feature.id}`}
+                type="button"
+                onClick={() => onSelectFeature(feature.id)}
+                aria-pressed={activeFeatureId === feature.id}
+                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 선택`}
+                className="cp-button-secondary"
+              >
+                {activeFeatureId === feature.id ? "선택됨" : "선택"}
+              </button>
+
               <button
                 type="button"
                 onClick={() => startEditing(feature)}

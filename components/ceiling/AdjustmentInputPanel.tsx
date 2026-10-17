@@ -15,6 +15,8 @@ interface AdjustmentInputPanelProps {
   onAdd: (adjustment: Adjustment) => void;
   onUpdate: (adjustment: Adjustment) => void;
   onDelete: (id: string) => void;
+  activeFeatureId: string | null;
+  onSelectFeature: (id: string | null) => void;
 }
 
 const materialLabels: Record<MaterialId, string> = {
@@ -29,6 +31,8 @@ export default function AdjustmentInputPanel({
   onAdd,
   onUpdate,
   onDelete,
+  activeFeatureId,
+  onSelectFeature,
 }: AdjustmentInputPanelProps) {
   const [featureId, setFeatureId] = useState("");
   const [materialId, setMaterialId] = useState<MaterialId>("BOARD");
@@ -57,6 +61,7 @@ export default function AdjustmentInputPanel({
     setQuantity(String(adjustment.quantity));
     setMemo(adjustment.memo);
     setError("");
+    onSelectFeature(adjustment.featureId);
   }
 
   // 선택했던 요소가 삭제됐으면 선택되지 않은 상태로 표시합니다.
@@ -289,7 +294,14 @@ export default function AdjustmentInputPanel({
               const feature = features[featureIndex];
 
               return (
-                <li key={adjustment.id} className="rounded-lg bg-slate-50 p-3">
+                <li
+                  key={adjustment.id}
+                  className={`rounded-lg border p-3 ${
+                    activeFeatureId === adjustment.featureId
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-transparent bg-slate-50"
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">
@@ -318,6 +330,14 @@ export default function AdjustmentInputPanel({
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelectFeature(adjustment.featureId)}
+                        aria-pressed={activeFeatureId === adjustment.featureId}
+                        className="cp-button-secondary"
+                      >
+                        연결 요소 선택
+                      </button>
                       <button
                         type="button"
                         onClick={() => startEditing(adjustment)}
