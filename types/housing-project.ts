@@ -98,3 +98,13 @@ export interface HousingCalculationResult {
   totalAreaM2: number;
   totalEstimatedCost: number | null;
 }
+
+export interface HousingReport {
+  calculatedAt: string;
+  calculationRuleVersion: string;
+
+  // 전체 계산 당시 프로젝트 복사본
+  project: HousingProject;
+
+  result: HousingCalculationResult;
+}

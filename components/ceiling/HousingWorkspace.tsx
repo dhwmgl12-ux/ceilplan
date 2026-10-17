@@ -6,13 +6,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   CeilingSpace,
-  HousingCalculationResult,
+  HousingReport,
   HousingProject,
   HousingUnitType,
 } from "@/types/housing-project";
 
-import { calculateHousingProject } from "@/lib/calculations/housing";
 import CeilingWorkspace, { type SpaceEditorHandle } from "./CeilingWorkspace";
+
+import HousingProjectManager from "./HousingProjectManager";
+import { createHousingReport } from "@/lib/calculations/housing";
+import { housingReportToCsv } from "@/lib/housing-csv";
+import { downloadText } from "@/lib/download";
 
 function createSpace(name: string): CeilingSpace {
   return {
@@ -138,12 +142,10 @@ export default function HousingWorkspace() {
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState("");
 
-  const [report, setReport] = useState<{
-    projectName: string;
-    result: HousingCalculationResult;
-  } | null>(null);
+  const [report, setReport] = useState<HousingReport | null>(null);
 
   const [reportStale, setReportStale] = useState(false);
+  const [editorEpoch, setEditorEpoch] = useState(0);
 
   const editorRef = useRef<SpaceEditorHandle>(null);
 
@@ -338,19 +340,60 @@ export default function HousingWorkspace() {
     setProject(next);
 
     try {
-      const result = calculateHousingProject(next, "PER_SPACE_PER_UNIT");
-
-      setReport({
-        projectName: next.name,
-        result,
-      });
-
+      setReport(createHousingReport(next));
       setReportStale(false);
       setError("");
     } catch (caught) {
       setReportStale(true);
       setError(
         caught instanceof Error ? caught.message : "전체 계산에 실패했습니다.",
+      );
+    }
+  }
+
+  function handleSaved(project: HousingProject) {
+    setProject(project);
+    setDirty(false);
+  }
+
+  function handleRestore(
+    project: HousingProject,
+    source: "storage" | "import" | "legacy",
+  ) {
+    const restored = structuredClone(project);
+    const firstType = restored.unitTypes[0];
+
+    setProject(restored);
+
+    setActiveTypeId(firstType?.id ?? null);
+    setActiveSpaceId(firstType?.spaces[0]?.id ?? null);
+
+    setNewTypeName("");
+    setNewSpaceName("");
+
+    // 이전 전체 결과를 새 프로젝트에 섞지 않습니다.
+    setReport(null);
+    setReportStale(false);
+    setError("");
+
+    setDirty(source !== "storage");
+    setEditorEpoch((previous) => previous + 1);
+  }
+
+  function handleDownloadHousingCsv() {
+    if (!report || reportStale) return;
+
+    try {
+      downloadText(
+        `ceilplan-housing-result-${Date.now()}.csv`,
+        "\uFEFF" + housingReportToCsv(report),
+        "text/csv;charset=utf-8",
+      );
+
+      setError("");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "CSV를 생성하지 못했습니다.",
       );
     }
   }
@@ -380,8 +423,8 @@ export default function HousingWorkspace() {
         </div>
 
         <p className="mt-3 text-sm leading-6 text-amber-800">
-          현재는 화면 연결 단계입니다. 새로고침하면 다중 공간 입력이 사라집니다.
-          다중 공간 저장·JSON은 다음 단계에서 연결합니다.
+          다중 공간 프로젝트는 브라우저에 저장할 수 있습니다. 다른 기기와
+          동기화되지 않으므로 필요한 자료는 JSON으로 백업하세요.
         </p>
 
         <label className="mt-4 block max-w-xl text-sm font-medium">
@@ -399,6 +442,15 @@ export default function HousingWorkspace() {
           />
         </label>
       </header>
+
+      <div className="m-4 sm:m-6">
+        <HousingProjectManager
+          getProject={readCurrentProject}
+          dirty={dirty}
+          onSaved={handleSaved}
+          onLoad={handleRestore}
+        />
+      </div>
 
       <section className="m-4 rounded-xl border border-slate-200 bg-white p-4 sm:m-6">
         <h2 className="cp-title">세대 타입</h2>
@@ -444,7 +496,7 @@ export default function HousingWorkspace() {
         {activeType && (
           <>
             <UnitTypeEditor
-              key={activeType.id}
+              key={`${editorEpoch}:${activeType.id}`}
               unitType={activeType}
               onApply={updateType}
             />
@@ -534,7 +586,23 @@ export default function HousingWorkspace() {
 
       {report && (
         <section className="cp-card m-4 sm:m-6">
-          <h2 className="cp-title">{report.projectName} · 전체 계산 요약</h2>
+          <h2 className="cp-title">{report.project.name} · 전체 계산 요약</h2>
+
+          <button
+            type="button"
+            onClick={handleDownloadHousingCsv}
+            disabled={reportStale}
+            className="cp-button-secondary mt-3"
+          >
+            전체 산출 CSV 다운로드
+          </button>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            계산 시각:{" "}
+            {new Date(report.calculatedAt).toLocaleString("ko-KR", {
+              timeZone: "Asia/Seoul",
+            })}
+          </p>
 
           {reportStale && (
             <p role="status" className="mt-3 text-sm text-amber-800">
@@ -590,7 +658,7 @@ export default function HousingWorkspace() {
       {activeSpace ? (
         <div id="dashboard">
           <CeilingWorkspace
-            key={`${activeTypeId}:${activeSpace.id}`}
+            key={`${editorEpoch}:${activeTypeId}:${activeSpace.id}`}
             ref={editorRef}
             spaceSession={{
               initialSpace: activeSpace,

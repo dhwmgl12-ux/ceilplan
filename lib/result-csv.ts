@@ -2,7 +2,7 @@ import type { CalculationSnapshot } from "../types/ceilplan";
 
 type Cell = string | number | null;
 
-function escapeCell(value: Cell): string {
+export function escapeCell(value: Cell): string {
   let content = value === null ? "미입력" : String(value);
 
   // 사용자 문자열이 스프레드시트 수식으로 실행되지 않도록 처리합니다.

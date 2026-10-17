@@ -4,6 +4,7 @@ import type {
   HousingProject,
   SpaceCalculation,
   UnitTypeCalculation,
+  HousingReport,
 } from "../../types/housing-project";
 
 import { calculateBase } from "./base.ts";
@@ -182,5 +183,23 @@ export function calculateHousingProject(
     totalEstimatedCost: sumCosts(
       unitTypes.map((type) => type.totalEstimatedCost),
     ),
+  };
+}
+
+export function createHousingReport(
+  project: HousingProject,
+  calculatedAt = new Date().toISOString(),
+): HousingReport {
+  if (!Number.isFinite(Date.parse(calculatedAt))) {
+    throw new Error("계산 시각이 올바르지 않습니다.");
+  }
+
+  const input = structuredClone(project);
+
+  return {
+    calculatedAt,
+    calculationRuleVersion: "housing-per-space-per-unit-v1",
+    project: input,
+    result: calculateHousingProject(input, "PER_SPACE_PER_UNIT"),
   };
 }
