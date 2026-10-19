@@ -30,6 +30,7 @@ import ResultsPanel from "./ResultsPanel";
 import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
 import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
+import FeatureToolsPanel from "./FeatureToolsPanel";
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
 import UsageGuide from "./UsageGuide";
 import { tryGetRoomGeometry } from "@/lib/geometry/room";
@@ -381,6 +382,18 @@ export default function CeilingWorkspace({
     }));
     setSelectedFeatureId(feature.id);
   }
+  function handleAddManyFeatures(nextFeatures: CeilingFeature[]) {
+    if (nextFeatures.length === 0) return;
+
+    const copied = nextFeatures.map((feature) => ({ ...feature }));
+
+    changeDocument((previous) => ({
+      ...previous,
+      features: [...previous.features, ...copied],
+    }));
+
+    setSelectedFeatureId(copied[0].id);
+  }
 
   function handleUpdateFeature(nextFeature: CeilingFeature) {
     changeDocument((previous) => ({
@@ -703,6 +716,14 @@ export default function CeilingWorkspace({
                 />
               </div>
             </details>
+
+            <FeatureToolsPanel
+              key={`feature-tools-${featureFormKey}`}
+              inputs={inputs}
+              features={features}
+              activeFeatureId={activeFeatureId}
+              onAddMany={handleAddManyFeatures}
+            />
 
             <AdjustmentInputPanel
               key={`adjustments-${featureFormKey}`}
