@@ -57,3 +57,258 @@ summary {
     scroll-behavior: auto !important;
   }
 }
+
+/* 발주용 보기 화면 */
+.order-print-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(960px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: white;
+  color: #172033;
+}
+
+.order-print-dialog::backdrop {
+  background: rgb(15 23 42 / 45%);
+}
+
+.order-print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+}
+
+.order-print-sheet {
+  padding: 28px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.order-print-brand {
+  margin: 0 0 8px;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.order-print-sheet h1 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.order-print-subtitle,
+.order-print-note {
+  margin-top: 8px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.order-print-sheet h2 {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.order-print-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin-top: 20px;
+}
+
+.order-print-meta > div {
+  min-width: 0;
+}
+
+.order-print-meta dt {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.order-print-meta dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.order-print-full {
+  grid-column: 1 / -1;
+}
+
+.order-print-table-scroll {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.order-print-sheet table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.order-print-sheet th,
+.order-print-sheet td {
+  padding: 10px 8px;
+  border: 1px solid #cbd5e1;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.order-print-sheet thead,
+.order-print-sheet tfoot {
+  background: #f1f5f9;
+}
+
+.order-print-sheet tfoot {
+  font-weight: 700;
+}
+
+.order-print-secondary {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.order-print-footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 11px;
+}
+
+.order-print-footer p + p {
+  margin-top: 6px;
+}
+
+.order-print-invalid {
+  margin: 16px;
+  padding: 12px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+@media screen and (max-width: 640px) {
+  .order-print-sheet {
+    padding: 18px;
+  }
+
+  .order-print-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 발주용 보기를 열었을 때만 적용하는 인쇄 스타일 */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  body:has(#ceilplan-order-print-root) {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  body:has(#ceilplan-order-print-root) > :not(#ceilplan-order-print-root) {
+    display: none !important;
+  }
+
+  #ceilplan-order-print-root {
+    display: block !important;
+    color: black;
+  }
+
+  #ceilplan-order-print-root .order-print-dialog {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .order-print-dialog::backdrop {
+    display: none !important;
+  }
+
+  .order-print-toolbar {
+    display: none !important;
+  }
+
+  .order-print-sheet {
+    padding: 0;
+    color: black;
+    font-size: 10pt;
+  }
+
+  .order-print-sheet h1 {
+    font-size: 20pt;
+  }
+
+  .order-print-sheet h2 {
+    break-after: avoid;
+  }
+
+  .order-print-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-print-table-scroll {
+    overflow: visible;
+  }
+
+  .order-print-sheet table {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 9pt;
+  }
+
+  .order-print-sheet thead {
+    display: table-header-group;
+  }
+
+  .order-print-sheet tfoot {
+    display: table-row-group;
+  }
+
+  .order-print-sheet tr {
+    break-inside: avoid;
+  }
+
+  .order-print-footer {
+    break-inside: avoid;
+  }
+
+  /* 오래된 문서를 인쇄하면 숫자 대신 재계산 안내만 출력 */
+  .order-print-sheet-invalid {
+    display: none !important;
+  }
+}

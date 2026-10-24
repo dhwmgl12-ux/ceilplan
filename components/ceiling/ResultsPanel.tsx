@@ -2,6 +2,7 @@ import type { CalculationSnapshot } from "@/types/ceilplan";
 import CalculationBreakdown from "./CalculationBreakdown";
 import { snapshotToCsv } from "@/lib/result-csv";
 import { downloadText } from "@/lib/download";
+import OrderPrintButton from "./OrderPrintButton";
 
 interface ResultsPanelProps {
   snapshot: CalculationSnapshot | null;
@@ -60,6 +61,10 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
             >
               결과 CSV 다운로드
             </button>
+
+            <div className="mt-2">
+              <OrderPrintButton snapshot={snapshot} stale={stale} />
+            </div>
 
             {stale && (
               <p
