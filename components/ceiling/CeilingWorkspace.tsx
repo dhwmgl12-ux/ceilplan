@@ -45,6 +45,9 @@ import {
 
 import type { CeilingSpace } from "@/types/housing-project";
 
+import ReviewPanel from "./ReviewPanel";
+import { collectReviewItems, type ReviewTarget } from "@/lib/review";
+
 export interface SpaceEditorHandle {
   readSpace: () => CeilingSpace | null;
 }
@@ -237,6 +240,54 @@ export default function CeilingWorkspace({
         [field]: value,
       },
     }));
+  }
+
+  const reviewItems = collectReviewItems({
+    siteInput: inputs,
+    materialInput: materialInputs,
+    features,
+    adjustments,
+    hasSnapshot: snapshot !== null,
+    stale,
+    dirty: !isSpaceEditor && dirty,
+    calculationErrors: errors,
+  });
+
+  function handleReviewNavigate(target: ReviewTarget) {
+    if (target === "FEATURES") {
+      if (featureDetailsRef.current) {
+        featureDetailsRef.current.open = true;
+      }
+
+      requestAnimationFrame(() => {
+        const element = featureDetailsRef.current;
+
+        element?.scrollIntoView({
+          behavior: "auto",
+          block: "start",
+        });
+
+        element
+          ?.querySelector<HTMLElement>("summary")
+          ?.focus({ preventScroll: true });
+      });
+
+      return;
+    }
+
+    if (target === "SAVE") {
+      const element = document.getElementById("project-save-area");
+
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+
+      element?.focus({ preventScroll: true });
+      return;
+    }
+
+    moveToSection(target === "RESULTS" ? "results" : "inputs");
   }
 
   function handleMaterialChange(field: keyof MaterialInput, value: string) {
@@ -574,19 +625,21 @@ export default function CeilingWorkspace({
           <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
 
           <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
-            <ProjectManager
-              key={projectManagerKey}
-              ref={projectManagerRef}
-              siteInput={inputs}
-              materialInput={materialInputs}
-              features={features}
-              adjustments={adjustments}
-              snapshot={snapshot}
-              dirty={dirty}
-              onLoad={handleLoadProject}
-              onNew={handleNewProject}
-              onSaved={() => setDirty(false)}
-            />
+            <div id="project-save-area" tabIndex={-1}>
+              <ProjectManager
+                key={projectManagerKey}
+                ref={projectManagerRef}
+                siteInput={inputs}
+                materialInput={materialInputs}
+                features={features}
+                adjustments={adjustments}
+                snapshot={snapshot}
+                dirty={dirty}
+                onLoad={handleLoadProject}
+                onNew={handleNewProject}
+                onSaved={() => setDirty(false)}
+              />
+            </div>
           </ProjectHeader>
         </>
       )}
@@ -625,6 +678,9 @@ export default function CeilingWorkspace({
         tabIndex={-1}
         className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6"
       >
+        <div className="mb-4">
+          <ReviewPanel items={reviewItems} onNavigate={handleReviewNavigate} />
+        </div>
         {!isSpaceEditor && (
           <div className="mb-4">
             <DraftRecovery
