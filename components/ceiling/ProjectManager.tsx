@@ -1,19 +1,51 @@
-import { useState } from "react";
-import type { MaterialInput, Project, SiteInput } from "@/types/ceilplan";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type Ref,
+} from "react";
+
+import type {
+  Adjustment,
+  MaterialInput,
+  Project,
+  SiteInput,
+  CeilingFeature,
+  CalculationSnapshot,
+} from "@/types/ceilplan";
 import { readProjects, saveProject } from "@/lib/project-storage";
 
+import { exportProjectJson, importProjectJson } from "@/lib/project-io";
+import { downloadText } from "@/lib/download";
+
+import { createExampleProject } from "@/lib/example-project";
+
+export interface ProjectManagerHandle {
+  openList: () => void;
+}
+
 interface ProjectManagerProps {
+  adjustments: Adjustment[];
   siteInput: SiteInput;
   materialInput: MaterialInput;
   dirty: boolean;
-  onLoad: (project: Project) => void;
+  onLoad: (project: Project, source: "storage" | "import" | "example") => void;
   onNew: () => void;
   onSaved: () => void;
+  features: CeilingFeature[];
+  ref?: Ref<ProjectManagerHandle>;
+  snapshot: CalculationSnapshot | null;
 }
 
 export default function ProjectManager({
+  ref,
   siteInput,
   materialInput,
+  features,
+  adjustments,
+  snapshot,
   dirty,
   onLoad,
   onNew,
@@ -27,6 +59,25 @@ export default function ProjectManager({
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const importContext = JSON.stringify({
+    projectId,
+    siteInput,
+    materialInput,
+    features,
+    adjustments,
+    snapshot,
+    dirty,
+  });
+
+  const latestImportContextRef = useRef(importContext);
+
+  useEffect(() => {
+    latestImportContextRef.current = importContext;
+  }, [importContext]);
 
   function handleSave() {
     setMessage("");
@@ -42,6 +93,11 @@ export default function ProjectManager({
         id: projectId ?? crypto.randomUUID(),
         siteInput: { ...siteInput },
         materialInput: { ...materialInput },
+        features: features.map((feature) => ({ ...feature })),
+        adjustments: adjustments.map((adjustment) => ({
+          ...adjustment,
+        })),
+        snapshot: snapshot ? structuredClone(snapshot) : null,
         updatedAt: new Date().toISOString(),
       };
 
@@ -78,6 +134,10 @@ export default function ProjectManager({
     }
   }
 
+  useImperativeHandle(ref, () => ({
+    openList: handleOpenList,
+  }));
+
   function canReplaceInputs() {
     return (
       !dirty ||
@@ -88,13 +148,15 @@ export default function ProjectManager({
   function handleLoad(project: Project) {
     if (!canReplaceInputs()) return;
 
-    onLoad(project);
+    onLoad(project, "storage");
 
     setProjectId(project.id);
     setSavedAt(project.updatedAt);
     setListOpen(false);
     setError("");
-    setMessage("프로젝트를 불러왔습니다. 계산 버튼을 눌러 결과를 확인하세요.");
+    setMessage(
+      "프로젝트를 불러왔습니다. 저장된 계산 결과가 있더라도 다시 계산해 확인하세요.",
+    );
   }
 
   function handleNew() {
@@ -109,24 +171,139 @@ export default function ProjectManager({
     setMessage("새 프로젝트를 시작합니다.");
   }
 
+  function handleLoadExample() {
+    if (!canReplaceInputs()) return;
+
+    const project = createExampleProject(
+      crypto.randomUUID(),
+      new Date().toISOString(),
+    );
+
+    onLoad(project, "example");
+
+    setProjectId(project.id);
+    setSavedAt(null);
+    setListOpen(false);
+    setError("");
+    setMessage(
+      "체험용 예시를 불러왔습니다. 모든 수치는 검산용이며 시공 권장값이나 실제 단가가 아닙니다. 계산 버튼을 눌러 결과를 확인하세요.",
+    );
+  }
+
+  function handleExportJson() {
+    setMessage("");
+    setError("");
+
+    try {
+      const project: Project = {
+        id: projectId ?? crypto.randomUUID(),
+        siteInput: { ...siteInput },
+        materialInput: { ...materialInput },
+        features,
+        adjustments,
+        snapshot,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const content = exportProjectJson(project);
+
+      downloadText(
+        `ceilplan-project-${Date.now()}.json`,
+        content,
+        "application/json;charset=utf-8",
+      );
+
+      setMessage("현재 입력과 마지막 계산 결과를 JSON으로 내보냈습니다.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "프로젝트를 내보내지 못했습니다.",
+      );
+    }
+  }
+
+  async function handleImportJson(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    // 같은 파일을 다시 선택할 수 있도록 초기화합니다.
+    event.target.value = "";
+
+    if (!file) return;
+
+    const contextAtStart = importContext;
+
+    setMessage("");
+    setError("");
+    setImporting(true);
+
+    try {
+      // 파일 크기 제한이며 시공 기준과 관계없습니다.
+      if (file.size > 1024 * 1024) {
+        throw new Error("JSON 파일은 1MB 이하로 선택하세요.");
+      }
+
+      const imported = importProjectJson(await file.text());
+
+      if (latestImportContextRef.current !== contextAtStart) {
+        throw new Error(
+          "파일을 읽는 동안 프로젝트가 변경되었습니다. JSON 파일을 다시 선택하세요.",
+        );
+      }
+
+      // 파일 읽기와 검증 후 현재 입력 교체 여부를 확인합니다.
+      if (!canReplaceInputs()) return;
+
+      // 기존 프로젝트를 덮어쓰지 않도록 새 프로젝트로 불러옵니다.
+      const project: Project = {
+        ...imported,
+        id: crypto.randomUUID(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      onLoad(project, "import");
+
+      setProjectId(project.id);
+      setSavedAt(null);
+      setListOpen(false);
+
+      setMessage(
+        "JSON을 새 프로젝트로 불러왔습니다. 브라우저에 저장하려면 저장 버튼을 누르세요. 가져온 계산 결과는 재계산이 필요합니다.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "프로젝트를 가져오지 못했습니다.",
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
   return (
     <section
+      id="projects"
       aria-labelledby="project-manager-title"
-      className="mb-4 rounded-xl border border-slate-200 bg-white p-5"
+      className="mt-4 border-t border-slate-100 pt-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="project-manager-title" className="text-sm font-semibold">
+          <h2 id="project-manager-title" className="sr-only">
             프로젝트 관리
           </h2>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-xs leading-5 text-slate-500">
             {savedAt
               ? `마지막 저장: ${new Date(savedAt).toLocaleString("ko-KR", {
                   timeZone: "Asia/Seoul",
                 })}`
               : "아직 저장하지 않았습니다."}
-            {dirty && " · 저장하지 않은 변경사항"}
+
+            {dirty && (
+              <span className="ml-2 font-medium text-amber-700">
+                · 저장하지 않은 변경사항
+              </span>
+            )}
           </p>
         </div>
 
@@ -134,9 +311,18 @@ export default function ProjectManager({
           <button
             type="button"
             onClick={handleNew}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+            disabled={importing}
+            className="cp-button-secondary"
           >
             새 프로젝트
+          </button>
+          <button
+            type="button"
+            onClick={handleLoadExample}
+            disabled={importing}
+            className="cp-button-secondary"
+          >
+            예시 프로젝트 불러오기
           </button>
 
           <button
@@ -144,7 +330,7 @@ export default function ProjectManager({
             onClick={handleOpenList}
             aria-expanded={listOpen}
             aria-controls="project-list"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+            className="cp-button-secondary"
           >
             프로젝트 목록
           </button>
@@ -152,10 +338,37 @@ export default function ProjectManager({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            // 저장 버튼
+            className="cp-button-primary"
           >
             저장
           </button>
+
+          <button
+            type="button"
+            onClick={handleExportJson}
+            className="cp-button-secondary"
+          >
+            JSON 내보내기
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="cp-button-secondary disabled:opacity-50"
+          >
+            {importing ? "가져오는 중…" : "JSON 가져오기"}
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportJson}
+            className="hidden"
+            aria-label="프로젝트 JSON 파일 선택"
+          />
         </div>
       </div>
 
@@ -171,10 +384,14 @@ export default function ProjectManager({
         </p>
       )}
 
-      <p className="mt-3 text-xs leading-5 text-slate-500">
-        이 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저
-        데이터를 삭제하면 저장 내용도 사라집니다.
-      </p>
+      <details className="mt-2 text-xs text-slate-500">
+        <summary className="cursor-pointer">브라우저 저장 안내</summary>
+
+        <p className="mt-2 leading-5">
+          이 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저
+          데이터를 삭제하면 저장 내용도 사라집니다.
+        </p>
+      </details>
 
       <div id="project-list" hidden={!listOpen}>
         <div className="mt-4 border-t border-slate-200 pt-4">

@@ -1,67 +1,142 @@
-# CeilPlan 개발 순서와 파일 구조
+# CeilPlan 구현 현황과 보완 계획
 
-## 1. 개발 순서
-
-1. AGENTS.md, product-spec.md, domain-rules.md에서 범위 확인
-2. 참고 시안의 사이드바·헤더·입력/미리보기/결과 레이아웃 구현
-3. 사용자 입력과 SVG, 현장 요소 표시 연결
-4. 프로젝트 생성·브라우저 저장·불러오기 연결
-5. 기본 수량 산출 방식을 사용자와 확정
-6. 기본 수량 → Loss → 구매 단위 올림 → 단가 적용 순수 함수 구현
-7. 사용자 검산 사례로 계산 테스트 작성
-8. 현장 요소 계산을 기준이 확인된 종류부터 추가
-
-## 2. 현재 파일 구조
+## 1. 현재 파일 구조
 
 ```text
 ceilplan/
   app/
-    page.tsx                    # Server Component: 대시보드 진입
-    layout.tsx                  # 한국어 문서, 메타데이터
-    globals.css                 # Tailwind, 공통 스타일
-  components/ceilplan/
-    Dashboard.tsx               # Client Component: 상태, 저장, 화면 연결
-    Panel.tsx                   # 공통 카드
-    InputPanel.tsx              # 현장·조건·Loss·단가 입력
-    CeilingPreview.tsx          # SVG, 현장 요소 입력·삭제
-    ResultsPanel.tsx            # 요약·상세 표·금액·계산 근거
-    components/layout/
-    ProjectHeader.tsx
-    Sidebar.tsx
+    page.tsx
+    layout.tsx
+    globals.css
+    error.tsx
+    not-found.tsx
+
+  components/
+    layout/
+      Sidebar.tsx
+      ProjectHeader.tsx
+    ceiling/
+      CeilingWorkspace.tsx
+      InputPanel.tsx
+      MaterialInputPanel.tsx
+      CeilingPreview.tsx
+      FeatureInputPanel.tsx
+      AdjustmentInputPanel.tsx
+      ProjectManager.tsx
+      ResultsPanel.tsx
+      CalculationBreakdown.tsx
+      UsageGuide.tsx
+
   types/
-    ceilplan.ts                 # 입력, 프로젝트, 현장 요소, 결과 타입
+    ceilplan.ts
+
   lib/
-    calculations/base.ts        # 입력 검증, 면적, 미확정 산출 상태
-    project-storage.ts          # 브라우저 저장, 저장 데이터 검증
+    calculations/
+      base.ts
+    project-storage.ts
+    project-io.ts
+    result-csv.ts
+    download.ts
+    example-project.ts
+
+    tests/
+    base.test.mjs
+    project-io.test.mjs
+    result-csv.test.mjs
+    project-storage.test.mjs
+    example-project.test.mjs
+
   docs/
     product-spec.md
     domain-rules.md
     implementation-plan.md
+    release-checklist.md
 ```
 
-## 3. 첫 구현의 동작
+## 2. 구현된 기능
 
-- 데스크톱 1360px 이상에서 3열, 작은 화면에서는 세로 스택
-- 공간 치수로 면적과 SVG 비율 갱신
-- 현장 요소는 위치·크기 입력으로 표시, 계산에는 아직 반영하지 않음
-- 프로젝트 생성, 목록, 브라우저 저장/불러오기
-- 사용자 입력의 음수·빈 값 검증
-- 결과 확인 이후 입력을 변경하면 재계산 필요 표시
-- 단가 미입력은 0원과 구분
+- 현장명과 직사각형 공간 치수 입력
+- 자재 간격·보드 규격·겹수·Loss·정척·단가 입력
+- 석고보드·M-BAR·캐링의 면적 기반 기본 물량 계산
+- 현장 요소 위치·크기 입력과 SVG 표시·삭제
+- 사용자 입력 현장 조정값 추가·목록·삭제
+- 기본 물량에 현장 추가·공제를 반영한 후 Loss 적용
+- 구매 단위 환산과 발주 올림
+- 예상 발주 수량과 금액
+- 계산 Snapshot과 자재별 계산 근거 상세보기
+- 프로젝트 브라우저 저장·목록·불러오기
+- 이전 저장 형식 호환
+- 프로젝트 JSON 내보내기·가져오기
+- Snapshot 결과 CSV 다운로드
+- 입력 변경 및 결과 복원 시 재계산 필요 표시
+- 공통 카드·입력·버튼 스타일
+- 미저장 변경 시 브라우저 이탈 확인
+- 오류 목록 포커스와 본문 바로가기
+- 오류 화면과 404 화면
 
-## 4. 실제 기준 확인 필요
+구현 여부와 검증 통과 여부는 구분한다.
+검증 결과는 release-checklist.md에 기록한다.
 
-간격과 규격은 입력받지만, 다음 산출 방식은 문서에서 확정되지 않았다.
+## 3. 계산 흐름
 
-- M-BAR/캐링: 면적÷간격으로 총길이를 추정할지, 배치 줄 수로 계산할지
-- 골조 배치 방향과 가장자리 처리
-- 석고보드: 면적÷1장 면적으로 추정할지, 배치·절단까지 반영할지 및 겹수
-- 정척 재료의 절단·잔재와 구매 묶음 단위
-- 행거·클립 산출 방식
-- 요소별 공제·보강
+기본 이론 물량
+→ 사용자 입력 현장 추가·공제
+→ 조정 후 이론 물량
+→ Loss 적용
+→ 구매 단위 환산
+→ 발주 올림
+→ 사용자 단가 적용
+→ 예상 금액
 
-확정 전에는 수량·금액을 기준 미확정/산출 대기로 표시한다.
-시안의 예시 수량·단가·금액을 기본값이나 계산식으로 사용하지 않는다.
+석고보드 조정값은 공간 면적(㎡)으로 입력하며,
+보드 규격과 겹수를 적용해 장수로 변환한다.
 
-현재 엔진 검증 범위는 기하학적 면적, 입력 상태, 미확정 상태다.
-실제 천장 물량 계산의 정확성을 검증한 단계는 아니다.
+M-BAR와 캐링 조정값은 연장(m)으로 입력한다.
+
+현장 요소의 크기만으로 자재 증감을 자동 계산하지 않는다.
+
+## 4. 화면과 상태
+
+- 데스크톱 1280px 이상: 입력·미리보기·결과 3열
+- 작은 화면: 세로 배치와 작업 영역 바로가기
+- 현재 입력과 마지막 계산 Snapshot은 분리
+- 입력 변경 시 이전 결과를 유지하고 재계산 필요 표시
+- 결과 복원 시 재계산 필요 표시
+- 재계산 필요 상태에서는 CSV 다운로드 비활성화
+- JSON에는 현재 입력과 마지막 Snapshot을 함께 보관
+
+미저장 상태와 재계산 필요 상태는 서로 다르다.
+
+## 5. 현재 제한
+
+- 직사각형 공간 1개
+- 면적 기반 예상 물량
+- 현장 요소별 자동 공제·보강 미지원
+- 실제 골조 배치·절단·잔재 최적화 미지원
+- 현장 요소와 조정값의 직접 수정 UI 미지원
+- 로그인·서버 DB·기기 간 동기화 미지원
+- 기타 자재 수동 입력 미지원
+- 구조 안전 판단 및 시공 승인 미지원
+
+JSON 검증은 형식·숫자 범위·요소 연결을 확인한다.
+가져온 결과의 계산 정확성을 보증하지 않는다.
+
+## 6. 다음 보완 순서
+
+1. 문서와 검증 기록 정리
+2. 계산 오류 시 이동 처리 통일
+3. 소수 추가·공제 경계 사례 테스트
+4. 현장 요소와 조정값 수정 기능
+5. 브라우저 저장 전용 테스트
+6. 작은 SVG 요소의 번호 표시
+7. 예시 프로젝트와 사용 안내
+
+기타 자재는 핵심 기능 검증 후 별도 단계로 검토한다.
+
+## 7. 검증 원칙
+
+- 기능 변경에 맞는 테스트를 추가한다.
+- 자동 검사와 브라우저 검증을 구분한다.
+- 확인하지 않은 항목은 완료 처리하지 않는다.
+- 발견한 문제는 재현 방법과 함께 기록한다.
+- 공식 시공 기준과 제품 계산 정책을 구분한다.

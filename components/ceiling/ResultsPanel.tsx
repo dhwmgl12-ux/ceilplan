@@ -1,7 +1,11 @@
-import type { CalculationResult } from "@/types/ceilplan";
+import type { CalculationSnapshot } from "@/types/ceilplan";
+import CalculationBreakdown from "./CalculationBreakdown";
+import { snapshotToCsv } from "@/lib/result-csv";
+import { downloadText } from "@/lib/download";
+import OrderPrintButton from "./OrderPrintButton";
 
 interface ResultsPanelProps {
-  result: CalculationResult | null;
+  snapshot: CalculationSnapshot | null;
   stale: boolean;
 }
 
@@ -19,17 +23,60 @@ function formatMoney(value: number | null) {
   })} 원`;
 }
 
-export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
+export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
+  const result = snapshot?.result ?? null;
+
+  function handleDownloadCsv() {
+    if (!snapshot || stale) return;
+
+    downloadText(
+      `ceilplan-result-${Date.now()}.csv`,
+
+      // Excel에서 한글이 깨지지 않도록 UTF-8 BOM을 추가합니다.
+      "\uFEFF" + snapshotToCsv(snapshot),
+
+      "text/csv;charset=utf-8",
+    );
+  }
+
   return (
     <section
       id="results"
       aria-labelledby="results-title"
       className="min-w-0 space-y-4"
     >
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 id="results-title" className="text-lg font-bold">
+      <div className="cp-card">
+        <h2 id="results-title" className="cp-title">
           예상 자재 산출 요약
         </h2>
+
+        {snapshot && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              disabled={stale}
+              aria-describedby={stale ? "csv-stale-notice" : undefined}
+              className="cp-button-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              결과 CSV 다운로드
+            </button>
+
+            <div className="mt-2">
+              <OrderPrintButton snapshot={snapshot} stale={stale} />
+            </div>
+
+            {stale && (
+              <p
+                id="csv-stale-notice"
+                className="mt-2 text-xs leading-5 text-amber-700"
+              >
+                입력이 변경됐거나 복원한 결과입니다. 다시 계산한 뒤 CSV를
+                다운로드하세요.
+              </p>
+            )}
+          </div>
+        )}
 
         {!result ? (
           <p className="mt-4 text-sm leading-6 text-slate-500">
@@ -51,14 +98,45 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               계산 당시 공간 면적: {formatQuantity(result.areaM2)} ㎡
             </p>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {result.materials.map((material) => (
-                <div key={material.id} className="rounded-lg bg-blue-50 p-3">
-                  <h3 className="text-sm font-semibold">{material.name}</h3>
+            {snapshot && (
+              <div className="mt-2 space-y-1 text-xs leading-5 text-slate-500">
+                <p className="break-words">
+                  계산 당시 현장: {snapshot.siteInput.name}
+                </p>
 
-                  <p className="mt-3 text-xl font-bold text-blue-700">
+                <p>
+                  계산 시각:{" "}
+                  {new Date(snapshot.calculatedAt).toLocaleString("ko-KR", {
+                    timeZone: "Asia/Seoul",
+                  })}
+                </p>
+
+                <p className="break-words">
+                  계산 정책: {snapshot.calculationRuleVersion}
+                </p>
+
+                <p>
+                  현재 입력 폼과 미리보기는 수정 중인 값이며, 아래 결과와 근거는
+                  계산 당시 값입니다.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1600px]:grid-cols-4">
+              {result.materials.map((material) => (
+                <div
+                  key={material.id}
+                  className="min-w-0 rounded-lg border border-blue-100 bg-blue-50/50 p-3"
+                >
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    {material.name}
+                  </h3>
+
+                  <p className="mt-3 break-words text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
                     {formatQuantity(material.orderQuantity)}{" "}
-                    {material.purchaseUnit}
+                    <span className="text-sm font-medium">
+                      {material.purchaseUnit}
+                    </span>
                   </p>
 
                   {material.quantityUnit === "m" && (
@@ -67,11 +145,29 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
                     </p>
                   )}
 
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2 break-words text-xs text-slate-600">
                     {formatMoney(material.estimatedCost)}
                   </p>
                 </div>
               ))}
+
+              <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <h3 className="text-sm font-semibold text-emerald-800">
+                  합계 예상 금액
+                </h3>
+
+                <p className="mt-3 break-words text-2xl font-bold tracking-tight text-emerald-700 tabular-nums">
+                  {result.totalEstimatedCost === null
+                    ? "단가 입력 필요"
+                    : formatMoney(result.totalEstimatedCost)}
+                </p>
+
+                <p className="mt-2 text-xs leading-5 text-emerald-800">
+                  {result.totalEstimatedCost === null
+                    ? "모든 자재의 단가를 입력하세요."
+                    : "자재비 기준 · VAT 별도"}
+                </p>
+              </div>
             </div>
           </>
         )}
@@ -79,59 +175,54 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
 
       {result && (
         <>
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-bold">상세 자재 산출 내역</h3>
+          <div className="cp-card">
+            <h3 className="cp-title">상세 자재 산출 내역</h3>
 
-            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[700px] text-left text-xs">
+            <div
+              role="region"
+              aria-label="자재 산출 표"
+              tabIndex={0}
+              className="mt-4 overflow-x-auto rounded-lg border border-slate-200"
+            >
+              <table className="w-full text-left text-xs">
                 <caption className="sr-only">
-                  기본 수량, Loss, 발주 올림 및 최종 발주 수량
+                  자재별 기본 수량, Loss 비율 및 최종 발주 수량
                 </caption>
 
                 <thead className="bg-blue-50 text-slate-600">
                   <tr>
-                    <th className="px-3 py-3">자재</th>
-                    <th className="px-3 py-3">이론 수량</th>
-                    <th className="px-3 py-3">Loss</th>
-                    <th className="px-3 py-3">Loss 증가량</th>
-                    <th className="px-3 py-3">Loss 적용 후</th>
-                    <th className="px-3 py-3">발주 올림분</th>
-                    <th className="px-3 py-3">최종 발주</th>
+                    <th scope="col" className="px-2 py-3">
+                      자재
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      기본 수량
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      Loss
+                    </th>
+                    <th scope="col" className="px-2 py-3 text-right">
+                      최종 발주
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {result.materials.map((material) => (
                     <tr key={material.id} className="border-t border-slate-200">
-                      <th scope="row" className="px-3 py-3 font-medium">
+                      <th scope="row" className="px-2 py-3 font-medium">
                         {material.name}
                       </th>
 
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3 text-right tabular-nums">
                         {formatQuantity(material.theoreticalQuantity)}{" "}
                         {material.quantityUnit}
                       </td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3 text-right tabular-nums">
                         {formatQuantity(material.lossRate)}%
                       </td>
 
-                      <td className="px-3 py-3">
-                        +{formatQuantity(material.lossAmount)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3">
-                        {formatQuantity(material.quantityAfterLoss)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3">
-                        +{formatQuantity(material.roundingSurplus)}{" "}
-                        {material.quantityUnit}
-                      </td>
-
-                      <td className="px-3 py-3 font-semibold text-blue-700">
+                      <td className="px-2 py-3 text-right font-semibold text-blue-700 tabular-nums">
                         {formatQuantity(material.orderQuantity)}{" "}
                         {material.purchaseUnit}
                       </td>
@@ -141,14 +232,27 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
               </table>
             </div>
 
+            {snapshot && (
+              <div className="mt-4 space-y-3">
+                {snapshot.result.materials.map((material) => (
+                  <CalculationBreakdown
+                    key={material.id}
+                    snapshot={snapshot}
+                    material={material}
+                  />
+                ))}
+              </div>
+            )}
+
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              현장 요소의 추가·공제·보강은 아직 반영하지 않습니다. 금속 자재의
-              Loss와 올림분은 길이(m), 최종 발주는 본수로 표시합니다.
+              사용자 입력 현장 조정값을 Loss 적용 전에 반영합니다. 금속 자재의
+              기본 물량과 증감은 m, 최종 발주는 본수입니다. 요소 크기를 이용한
+              자동 공제·보강은 지원하지 않습니다.
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-bold">예상 발주 금액</h3>
+          <div className="cp-card">
+            <h3 className="cp-title">자재별 금액 계산 내역</h3>
 
             <p className="mt-1 text-xs text-slate-500">
               자재비 기준 · VAT, 운송비, 인건비 제외
@@ -180,45 +284,120 @@ export default function ResultsPanel({ result, stale }: ResultsPanelProps) {
                 </div>
               ))}
             </dl>
-
-            <div className="mt-5 rounded-lg bg-emerald-50 p-4">
-              <p className="text-sm font-semibold text-emerald-800">
-                합계 예상 금액
-              </p>
-
-              <p className="mt-2 text-2xl font-bold text-emerald-700">
-                {result.totalEstimatedCost === null
-                  ? "단가 입력 필요"
-                  : formatMoney(result.totalEstimatedCost)}
-              </p>
-
-              {result.totalEstimatedCost === null && (
-                <p className="mt-2 text-xs text-emerald-800">
-                  모든 자재의 단가를 입력해야 합계를 계산할 수 있습니다.
-                </p>
-              )}
-            </div>
           </div>
         </>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="text-lg font-bold">계산 근거</h3>
+      <div className="cp-card">
+        <h3 className="cp-title">계산 근거 및 산출 기준</h3>
 
-        <ol className="mt-4 space-y-3 text-xs leading-6 text-slate-600">
-          <li>1. 공간 면적: 가로(mm) × 세로(mm) ÷ 1,000,000</li>
-          <li>2. 석고보드: 공간 면적 ÷ 보드 1장 면적 × 겹수</li>
-          <li>3. M-BAR·캐링: 공간 면적 ÷ 입력 간격(m)</li>
-          <li>4. Loss: 이론 수량 × (1 + 입력 Loss ÷ 100)</li>
-          <li>
-            5. 석고보드는 장수 올림, 금속 자재는 정척 길이로 나눈 본수를 올림
-          </li>
-          <li>6. 예상 금액: 발주 장수·본수 × 해당 구매 단위의 단가</li>
+        <ol className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {[
+            {
+              title: "기본 물량과 현장 조정",
+              description:
+                "면적 기반 이론 물량에 사용자가 입력한 현장 추가·공제를 반영합니다.",
+            },
+            {
+              title: "Loss 적용",
+              description:
+                "입력한 석고·금속 Loss를 적용하고 증가량을 별도로 표시합니다.",
+            },
+            {
+              title: "구매 단위",
+              description:
+                "석고는 장 단위, 금속은 입력한 정척 길이의 본 단위로 올림합니다.",
+            },
+            {
+              title: "예상 금액",
+              description:
+                "최종 발주 수량에 해당 구매 단위의 사용자 단가를 적용합니다.",
+            },
+          ].map((step, index) => (
+            <li key={step.title}>
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <span
+                  aria-hidden="true"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-700"
+                >
+                  {index + 1}
+                </span>
+
+                {step.title}
+              </h4>
+
+              <p className="mt-2 text-xs leading-6 text-slate-500">
+                {step.description}
+              </p>
+            </li>
+          ))}
         </ol>
 
+        <details className="mt-4 rounded-lg border border-slate-200">
+          <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-blue-700">
+            자세한 계산 공식 보기
+          </summary>
+
+          <dl className="space-y-4 border-t border-slate-100 p-3 text-xs leading-6">
+            <div>
+              <dt className="font-semibold">공간 면적</dt>
+              <dd className="text-slate-600">
+                직사각형은 가로 × 세로로 계산합니다. ㄱ자·ㄷ자는 제외 영역을
+                반영한 천장 영역의 면적을 사용합니다. 자세한 치수는 자재별 계산
+                근거에서 확인하세요.
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">석고보드 이론 장수</dt>
+              <dd className="text-slate-600">
+                공간 면적(㎡) ÷ 보드 1장 면적(㎡) × 겹수
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">M-BAR·캐링 이론 총길이</dt>
+              <dd className="text-slate-600">공간 면적(㎡) ÷ 입력 간격(m)</dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">Loss 적용 수량</dt>
+              <dd className="text-slate-600">
+                조정 후 이론 물량 × (1 + Loss 비율 ÷ 100)
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">발주 수량</dt>
+              <dd className="text-slate-600">
+                석고: Loss 적용 장수 올림
+                <br />
+                금속: Loss 적용 길이(m) ÷ 정척 길이(m)의 결과 올림
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">발주 올림 증가량</dt>
+              <dd className="text-slate-600">
+                주문 총수량 − Loss 적용 수량
+                <br />
+                금속 주문 총길이 = 발주 본수 × 정척 길이
+              </dd>
+            </div>
+
+            <div>
+              <dt className="font-semibold">예상 금액</dt>
+              <dd className="text-slate-600">
+                발주 장수·본수 × 해당 구매 단위의 단가
+              </dd>
+            </div>
+          </dl>
+        </details>
+
         <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-6 text-slate-500">
-          면적 기반 예상값입니다. 실제 골조 배치, 절단·잔재, 현장 요소 보강 및
-          구조 안전 판단은 포함하지 않습니다.
+          면적 기반 예상값이며 사용자 입력 조정값을 반영합니다. 현장 요소별 자동
+          공제·보강, 실제 골조 배치, 절단·잔재 및 구조 안전 판단은 포함하지
+          않습니다.
         </p>
       </div>
     </section>
