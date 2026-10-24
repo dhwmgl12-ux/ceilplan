@@ -48,6 +48,8 @@ import type { CeilingSpace } from "@/types/housing-project";
 import ReviewPanel from "./ReviewPanel";
 import { collectReviewItems, type ReviewTarget } from "@/lib/review";
 
+import CalculationPlansPanel from "./CalculationPlansPanel";
+
 export interface SpaceEditorHandle {
   readSpace: () => CeilingSpace | null;
 }
@@ -847,7 +849,15 @@ export default function CeilingWorkspace({
             />
           </div>
 
-          <ResultsPanel snapshot={snapshot} stale={stale} />
+          <div className="min-w-0 space-y-4">
+            <ResultsPanel snapshot={snapshot} stale={stale} />
+
+            <CalculationPlansPanel
+              key={`calculation-plans-${featureFormKey}`}
+              snapshot={snapshot}
+              stale={stale}
+            />
+          </div>
         </div>
       </main>
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[1280px]:hidden">
