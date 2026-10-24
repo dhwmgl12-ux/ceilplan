@@ -17,6 +17,9 @@ import HousingProjectManager from "./HousingProjectManager";
 import { createHousingReport } from "@/lib/calculations/housing";
 import { housingReportToCsv } from "@/lib/housing-csv";
 import { downloadText } from "@/lib/download";
+import DraftRecovery from "./DraftRecovery";
+import { HOUSING_DRAFT_KEY } from "@/lib/draft-storage";
+import { normalizeHousingProject } from "@/lib/housing-io";
 
 function createSpace(name: string): CeilingSpace {
   return {
@@ -53,6 +56,30 @@ function money(value: number | null) {
   return value === null
     ? "단가 입력 필요"
     : `${value.toLocaleString("ko-KR")} 원`;
+}
+function normalizeHousingDraft(value: unknown): HousingProject {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("다중 공간 임시저장 형식이 올바르지 않습니다.");
+  }
+
+  const data = value as Record<string, unknown>;
+
+  if (typeof data.name !== "string" || typeof data.updatedAt !== "string") {
+    throw new Error("프로젝트 이름 또는 시각 형식을 확인하세요.");
+  }
+
+  // 작성 중에는 프로젝트 이름과 저장 시각이 비어 있을 수 있습니다.
+  const normalized = normalizeHousingProject({
+    ...data,
+    name: data.name.trim() ? data.name : "이름 없는 임시 프로젝트",
+    updatedAt: data.updatedAt || "2000-01-01T00:00:00.000Z",
+  });
+
+  return {
+    ...normalized,
+    name: data.name,
+    updatedAt: data.updatedAt,
+  };
 }
 
 function UnitTypeEditor({
@@ -380,6 +407,16 @@ export default function HousingWorkspace() {
     setEditorEpoch((previous) => previous + 1);
   }
 
+  function recoverHousingDraft(project: HousingProject) {
+    handleRestore(
+      {
+        ...project,
+        id: crypto.randomUUID(),
+      },
+      "import",
+    );
+  }
+
   function handleDownloadHousingCsv() {
     if (!report || reportStale) return;
 
@@ -442,6 +479,16 @@ export default function HousingWorkspace() {
           />
         </label>
       </header>
+
+      <div className="m-4 sm:m-6">
+        <DraftRecovery
+          storageKey={HOUSING_DRAFT_KEY}
+          dirty={dirty}
+          readData={readCurrentProject}
+          normalize={normalizeHousingDraft}
+          onRecover={recoverHousingDraft}
+        />
+      </div>
 
       <div className="m-4 sm:m-6">
         <HousingProjectManager

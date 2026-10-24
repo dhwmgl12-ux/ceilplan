@@ -15,7 +15,11 @@ import type {
   MaterialInput,
   Project,
   SiteInput,
+  StoredProjectV2,
 } from "@/types/ceilplan";
+import DraftRecovery from "./DraftRecovery";
+import { SINGLE_DRAFT_KEY } from "@/lib/draft-storage";
+import { normalizeProjectData } from "@/lib/project-io";
 
 import {
   calculateBase,
@@ -127,6 +131,7 @@ export default function CeilingWorkspace({
   const [errors, setErrors] = useState<string[]>([]);
   const [stale, setStale] = useState(Boolean(initialSpace?.snapshot));
   const [featureFormKey, setFeatureFormKey] = useState(0);
+  const [projectManagerKey, setProjectManagerKey] = useState(0);
   const [historyMessage, setHistoryMessage] = useState("");
 
   const editingSpaceId = initialSpace?.id;
@@ -353,6 +358,34 @@ export default function CeilingWorkspace({
     setSelectedFeatureId(null);
   }
 
+  function readSingleDraft(): StoredProjectV2 {
+    return {
+      id: "single-recovery-draft",
+
+      // 임시 데이터 검증을 위한 고정값입니다.
+      // 실제 임시저장 시각은 임시저장 모듈이 별도로 기록합니다.
+      updatedAt: "2000-01-01T00:00:00.000Z",
+
+      siteInput: inputs,
+      materialInput: materialInputs,
+      features,
+      adjustments,
+      snapshot,
+    };
+  }
+
+  function recoverSingleDraft(project: StoredProjectV2) {
+    handleLoadProject(
+      {
+        ...project,
+        id: crypto.randomUUID(),
+      },
+      "import",
+    );
+
+    setProjectManagerKey((previous) => previous + 1);
+  }
+
   function markCalculationChanged() {
     setDirty(true);
     setErrors([]);
@@ -542,6 +575,7 @@ export default function CeilingWorkspace({
 
           <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
             <ProjectManager
+              key={projectManagerKey}
               ref={projectManagerRef}
               siteInput={inputs}
               materialInput={materialInputs}
@@ -593,7 +627,13 @@ export default function CeilingWorkspace({
       >
         {!isSpaceEditor && (
           <div className="mb-4">
-            <UsageGuide />
+            <DraftRecovery
+              storageKey={SINGLE_DRAFT_KEY}
+              dirty={dirty}
+              readData={readSingleDraft}
+              normalize={normalizeProjectData}
+              onRecover={recoverSingleDraft}
+            />
           </div>
         )}
 
