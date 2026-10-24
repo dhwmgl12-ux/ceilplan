@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useDrawingBackground } from "@/hooks/useDrawingBackground";
+import DrawingBackgroundPanel from "./DrawingBackgroundPanel";
 import {
   useFeaturePointer,
   type FeaturePointerMode,
@@ -36,6 +38,8 @@ export default function CeilingPreview({
   onAdd,
   onUpdate,
 }: CeilingPreviewProps) {
+  const background = useDrawingBackground();
+  const backgroundClipId = useId().replaceAll(":", "");
   const [pointerMode, setPointerMode] = useState<FeaturePointerMode>("VIEW");
 
   const [placementType, setPlacementType] =
@@ -83,6 +87,18 @@ export default function CeilingPreview({
   const dimensionY = y - 24;
   const dimensionX = x - 24;
 
+  const roomPolygonPoints =
+    room?.points
+      .map((point) => `${x + point.x * scale},${y + point.y * scale}`)
+      .join(" ") ?? "";
+
+  const showBackground = Boolean(
+    background.image &&
+    background.visible &&
+    background.placementValid &&
+    isValid,
+  );
+
   const pointer = useFeaturePointer({
     inputs,
     features,
@@ -120,6 +136,8 @@ export default function CeilingPreview({
       <p className="mt-2 text-xs leading-5 text-slate-500">
         입력한 공간 치수를 기준으로 표시한 2D 평면도입니다.
       </p>
+
+      <DrawingBackgroundPanel background={background} />
 
       <div className="mt-4 rounded-lg border border-slate-200 p-3">
         <div
@@ -335,15 +353,45 @@ export default function CeilingPreview({
           </desc>
 
           {/* 공간 */}
+          <defs>
+            <clipPath id={backgroundClipId}>
+              <polygon points={roomPolygonPoints} />
+            </clipPath>
+          </defs>
+
+          {/* 공간 바탕 */}
           <polygon
-            points={
-              room?.points
-                .map((point) => `${x + point.x * scale},${y + point.y * scale}`)
-                .join(" ") ?? ""
-            }
+            points={roomPolygonPoints}
             fill="#eff6ff"
+            pointerEvents="none"
+          />
+
+          {/* 참고용 배경 이미지 */}
+          {showBackground && background.image && (
+            <g
+              clipPath={`url(#${backgroundClipId})`}
+              pointerEvents="none"
+              aria-hidden="true"
+            >
+              <image
+                href={background.image.url}
+                x={x + background.xMm * scale}
+                y={y + background.yMm * scale}
+                width={background.widthMm * scale}
+                height={background.heightMm * scale}
+                preserveAspectRatio="xMinYMin meet"
+                opacity={background.opacity}
+              />
+            </g>
+          )}
+
+          {/* 이미지 위에 공간 외곽선을 표시 */}
+          <polygon
+            points={roomPolygonPoints}
+            fill="none"
             stroke="#334155"
             strokeWidth={3}
+            pointerEvents="none"
           />
 
           {/* 현장 요소 */}
