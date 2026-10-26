@@ -1,60 +1,271 @@
 @import "tailwindcss";
 
-body {
-  margin: 0;
-  background: #f3f7fc;
-  color: #152747;
-  font-family: Arial, "Malgun Gothic", sans-serif;
+/* 공통 디자인 값 */
+:root {
+  color-scheme: light;
+
+  --cp-bg: #f6f7f9;
+  --cp-surface: #ffffff;
+  --cp-surface-muted: #f8fafc;
+
+  --cp-text: #182230;
+  --cp-text-secondary: #475467;
+  --cp-text-muted: #667085;
+
+  --cp-border: #e4e7ec;
+  --cp-border-hover: #b8c1ce;
+
+  --cp-primary: #2563eb;
+  --cp-primary-hover: #1d4ed8;
+  --cp-primary-active: #1e40af;
+  --cp-primary-soft: #eff6ff;
+  --cp-focus: #2563eb;
+
+  --cp-danger: #b42318;
+  --cp-danger-soft: #fef3f2;
+
+  --cp-radius-sm: 6px;
+  --cp-radius-md: 8px;
+  --cp-radius-lg: 10px;
+
+  --cp-shadow-panel: 0 1px 2px rgb(16 24 40 / 3%);
+
+  --cp-space-1: 4px;
+  --cp-space-2: 8px;
+  --cp-space-3: 12px;
+  --cp-space-4: 16px;
+  --cp-space-5: 20px;
+  --cp-space-6: 24px;
+
+  --cp-control-height: 44px;
 }
 
+/* 기본 문서 스타일 */
+@layer base {
+  body {
+    margin: 0;
+    background: var(--cp-bg);
+    color: var(--cp-text);
+
+    font-family:
+      "Pretendard",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "Malgun Gothic",
+      sans-serif;
+
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  ::selection {
+    background: #dbeafe;
+    color: #172554;
+  }
+}
+
+/* 기존 컴포넌트에서 사용하는 공통 클래스 */
 @layer components {
+  /* 입력·결과 패널 */
   .cp-card {
-    @apply min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5;
+    min-width: 0;
+    padding: var(--cp-space-4);
+    border: 1px solid var(--cp-border);
+    border-radius: var(--cp-radius-lg);
+    background: var(--cp-surface);
+    box-shadow: var(--cp-shadow-panel);
   }
 
+  /* 패널 제목 */
   .cp-title {
-    @apply text-base font-bold tracking-tight text-slate-900;
+    margin: 0;
+    color: var(--cp-text);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: -0.025em;
   }
 
+  /* 일반 입력·선택 메뉴 */
   .cp-input {
-    @apply h-11 min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-900 sm:text-sm;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: var(--cp-control-height);
+
+    padding-inline: var(--cp-space-3);
+
+    border: 1px solid var(--cp-border);
+    border-radius: var(--cp-radius-sm);
+    background: var(--cp-surface);
+    color: var(--cp-text);
+
+    font-size: 16px;
+    line-height: 1.5;
+
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease;
   }
 
-  .cp-button-primary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+  .cp-input::placeholder {
+    color: var(--cp-text-muted);
+    opacity: 1;
   }
 
+  .cp-input:enabled:hover {
+    border-color: var(--cp-border-hover);
+  }
+
+  .cp-input:focus-visible {
+    border-color: var(--cp-primary);
+  }
+
+  .cp-input:disabled {
+    cursor: not-allowed;
+    background: var(--cp-surface-muted);
+    color: var(--cp-text-muted);
+  }
+
+  .cp-input[readonly] {
+    background: var(--cp-surface-muted);
+  }
+
+  .cp-input[aria-invalid="true"] {
+    border-color: var(--cp-danger);
+    background: var(--cp-danger-soft);
+  }
+
+  /* 버튼 공통 구조 */
+  .cp-button-primary,
   .cp-button-secondary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--cp-space-2);
+
+    min-height: var(--cp-control-height);
+    padding: 8px 14px;
+
+    border: 1px solid transparent;
+    border-radius: var(--cp-radius-sm);
+
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+  }
+
+  /* 계산·저장 등 핵심 작업 */
+  .cp-button-primary {
+    border-color: var(--cp-primary);
+    background: var(--cp-primary);
+    color: #ffffff;
+  }
+
+  .cp-button-primary:enabled:hover {
+    border-color: var(--cp-primary-hover);
+    background: var(--cp-primary-hover);
+  }
+
+  .cp-button-primary:enabled:active {
+    border-color: var(--cp-primary-active);
+    background: var(--cp-primary-active);
+  }
+
+  /* 열기·취소·보조 작업 */
+  .cp-button-secondary {
+    border-color: var(--cp-border);
+    background: var(--cp-surface);
+    color: var(--cp-text-secondary);
+  }
+
+  .cp-button-secondary:enabled:hover {
+    border-color: var(--cp-border-hover);
+    background: var(--cp-surface-muted);
+    color: var(--cp-text);
+  }
+
+  .cp-button-secondary:enabled:active {
+    background: #eef1f5;
+  }
+
+  /* 도구의 선택 상태 */
+  .cp-button-secondary[aria-pressed="true"] {
+    border-color: #93b4fb;
+    background: var(--cp-primary-soft);
+    color: var(--cp-primary-hover);
+  }
+
+  .cp-button-primary:disabled,
+  .cp-button-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  @media (min-width: 640px) {
+    .cp-card {
+      padding: var(--cp-space-5);
+    }
+
+    .cp-input {
+      font-size: 14px;
+    }
   }
 }
 
+/* 키보드 조작 */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--cp-focus);
+  outline-offset: 3px;
+}
+
+/* 클릭 가능한 요소 */
 button:not(:disabled),
 summary {
   cursor: pointer;
 }
 
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 3px solid #2563eb;
-  outline-offset: 3px;
-}
-
+/* 작업 영역으로 이동할 때 상단 여백 */
 :where(
   #main-content,
   #projects,
   #inputs,
   #preview,
   #results,
-  #calculation-errors
+  #calculation-errors,
+  #project-save-area
 ) {
   scroll-margin-top: 6rem;
 }
 
+/* 움직임 최소화 설정 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
+  }
+
+  .cp-input,
+  .cp-button-primary,
+  .cp-button-secondary {
+    transition: none;
   }
 }
 
