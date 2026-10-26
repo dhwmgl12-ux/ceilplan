@@ -284,7 +284,7 @@ export default function ProjectManager({
     <section
       id="projects"
       aria-labelledby="project-manager-title"
-      className="mt-4 border-t border-slate-100 pt-4"
+      className="border-t border-[var(--cp-border)] px-4 py-3 sm:px-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -307,7 +307,7 @@ export default function ProjectManager({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleNew}
@@ -316,50 +316,62 @@ export default function ProjectManager({
           >
             새 프로젝트
           </button>
-          <button
-            type="button"
-            onClick={handleLoadExample}
-            disabled={importing}
-            className="cp-button-secondary"
-          >
-            예시 프로젝트 불러오기
-          </button>
 
           <button
             type="button"
             onClick={handleOpenList}
+            disabled={importing}
             aria-expanded={listOpen}
             aria-controls="project-list"
             className="cp-button-secondary"
           >
-            프로젝트 목록
+            목록 열기
           </button>
 
           <button
             type="button"
             onClick={handleSave}
-            // 저장 버튼
+            disabled={importing}
             className="cp-button-primary"
           >
-            저장
+            프로젝트 저장
           </button>
 
-          <button
-            type="button"
-            onClick={handleExportJson}
-            className="cp-button-secondary"
-          >
-            JSON 내보내기
-          </button>
+          <details className="rounded-md border border-slate-200 bg-white">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+              추가 작업
+              <span aria-hidden="true">⌄</span>
+            </summary>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="cp-button-secondary disabled:opacity-50"
-          >
-            {importing ? "가져오는 중…" : "JSON 가져오기"}
-          </button>
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3">
+              <button
+                type="button"
+                onClick={handleLoadExample}
+                disabled={importing}
+                className="cp-button-secondary"
+              >
+                예시 프로젝트 불러오기
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportJson}
+                disabled={importing}
+                className="cp-button-secondary"
+              >
+                JSON 내보내기
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="cp-button-secondary"
+              >
+                {importing ? "가져오는 중…" : "JSON 가져오기"}
+              </button>
+            </div>
+          </details>
 
           <input
             ref={fileInputRef}

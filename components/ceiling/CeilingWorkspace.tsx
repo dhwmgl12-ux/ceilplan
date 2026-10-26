@@ -624,9 +624,17 @@ export default function CeilingWorkspace({
         </header>
       ) : (
         <>
-          <Sidebar activeMenu={activeMenu} onNavigate={handleNavigate} />
+          <Sidebar
+            activeMenu={activeMenu}
+            onNavigate={handleNavigate}
+            hasUnsavedChanges={dirty}
+          />
 
-          <ProjectHeader projectName={inputs.name} areaM2={areaM2}>
+          <ProjectHeader
+            projectName={inputs.name}
+            areaM2={areaM2}
+            dirty={dirty}
+          >
             <div id="project-save-area" tabIndex={-1}>
               <ProjectManager
                 key={projectManagerKey}
