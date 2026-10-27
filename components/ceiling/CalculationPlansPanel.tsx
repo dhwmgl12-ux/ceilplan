@@ -177,8 +177,8 @@ export default function CalculationPlansPanel({
   }
 
   return (
-    <section aria-labelledby="calculation-plans-title" className="cp-card">
-      <h2 id="calculation-plans-title" className="cp-title">
+    <section aria-labelledby="calculation-plans-title" className="min-w-0">
+      <h2 id="calculation-plans-title" className="sr-only">
         계산안 저장·비교
       </h2>
 

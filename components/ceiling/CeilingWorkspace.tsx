@@ -52,6 +52,8 @@ import CalculationPlansPanel from "./CalculationPlansPanel";
 
 import FeaturePropertiesPanel from "./FeaturePropertiesPanel";
 
+import ToolSection from "@/components/ui/ToolSection";
+
 export interface SpaceEditorHandle {
   readSpace: () => CeilingSpace | null;
 }
@@ -995,11 +997,23 @@ export default function CeilingWorkspace({
           >
             <ResultsPanel snapshot={snapshot} stale={stale} />
 
-            <CalculationPlansPanel
-              key={`calculation-plans-${featureFormKey}`}
-              snapshot={snapshot}
-              stale={stale}
-            />
+            <ToolSection
+              title="계산안 저장·비교"
+              description="현재 결과를 보관하고 변경 전후 수량·금액을 비교합니다."
+              status={
+                !snapshot
+                  ? "계산 후 저장 가능"
+                  : stale
+                    ? "재계산 필요"
+                    : "현재 결과 저장 가능"
+              }
+            >
+              <CalculationPlansPanel
+                key={`calculation-plans-${featureFormKey}`}
+                snapshot={snapshot}
+                stale={stale}
+              />
+            </ToolSection>
           </div>
         </div>
       </main>
