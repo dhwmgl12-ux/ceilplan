@@ -367,6 +367,57 @@ summary {
   }
 }
 
+/* 설계 캔버스 */
+.cp-canvas-panel {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-lg);
+  background: var(--cp-surface);
+}
+
+/* 도구 모음 아래의 부가 정보 여백 */
+.cp-canvas-panel
+  > :not(header):not(.cp-canvas-tools):not(svg):not(.cp-canvas-empty) {
+  margin-inline: 16px;
+}
+
+.cp-canvas-panel > :last-child {
+  margin-bottom: 16px;
+}
+
+.cp-canvas-tools {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cp-border);
+  background: white;
+}
+
+.cp-canvas-svg {
+  display: block;
+  width: 100%;
+  height: clamp(300px, 58dvh, 680px);
+  background: #f8fafc;
+}
+
+.cp-canvas-empty {
+  display: flex;
+  min-height: clamp(300px, 58dvh, 680px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f8fafc;
+}
+
+@media (min-width: 1280px) {
+  .cp-canvas-svg {
+    height: clamp(380px, 62dvh, 760px);
+  }
+
+  .cp-canvas-empty {
+    min-height: clamp(380px, 62dvh, 760px);
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;
