@@ -418,6 +418,78 @@ summary {
   }
 }
 
+/* 접이식 보조 도구 */
+.cp-tool-section {
+  min-width: 0;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  background: var(--cp-surface);
+}
+
+.cp-tool-summary {
+  min-height: 48px;
+  padding: 12px;
+  border-radius: var(--cp-radius-md);
+  color: var(--cp-text-secondary);
+  cursor: pointer;
+
+  transition: background-color 120ms ease;
+}
+
+.cp-tool-summary::marker {
+  color: var(--cp-text-muted);
+}
+
+.cp-tool-summary:hover {
+  background: var(--cp-surface-muted);
+}
+
+.cp-tool-section[open] > .cp-tool-summary {
+  border-bottom: 1px solid var(--cp-border);
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.cp-tool-heading {
+  display: inline-flex;
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  vertical-align: top;
+}
+
+.cp-tool-title {
+  color: var(--cp-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cp-tool-status {
+  color: var(--cp-text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.cp-tool-description {
+  display: block;
+  margin-top: 4px;
+  color: var(--cp-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.cp-tool-body {
+  min-width: 0;
+  padding: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-tool-summary {
+    transition: none;
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;
