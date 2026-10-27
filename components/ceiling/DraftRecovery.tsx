@@ -239,50 +239,92 @@ export default function DraftRecovery<T>({
   return (
     <section
       aria-label="자동 임시저장과 작업 복구"
-      className="rounded-xl border border-blue-100 bg-blue-50 p-4"
+      className={`rounded-lg border px-4 py-3 ${
+        pending || error
+          ? "border-amber-200 bg-amber-50"
+          : "border-[var(--cp-border)] bg-white"
+      }`}
     >
-      <p className="text-sm font-semibold text-blue-900">
-        {pending ? "이전 작업의 임시저장본이 있습니다." : "자동 임시저장"}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-slate-700">
+          {pending
+            ? "복구할 이전 작업이 있습니다"
+            : error
+              ? "임시저장 확인 필요"
+              : "자동 임시저장"}
+        </p>
 
-      {savedAt && (
-        <p className="mt-2 text-xs text-slate-600">
-          임시저장 시각: {new Date(savedAt).toLocaleString("ko-KR")}
+        {savedAt && (
+          <time dateTime={savedAt} className="text-[11px] text-slate-500">
+            {new Date(savedAt).toLocaleString("ko-KR", {
+              timeZone: "Asia/Seoul",
+            })}
+          </time>
+        )}
+      </div>
+
+      {pending ? (
+        <>
+          <p className="mt-2 text-xs leading-5 text-slate-600">
+            이전 작업을 복구하거나 임시본을 삭제하세요. 선택하기 전에는 새
+            작업으로 임시본을 덮어쓰지 않습니다. 수동 저장한 프로젝트는 별도로
+            유지됩니다.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={recover}
+              className="cp-button-primary"
+            >
+              이전 작업 복구
+            </button>
+
+            <button
+              type="button"
+              onClick={discard}
+              className="cp-button-secondary"
+            >
+              임시본 삭제
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          {dirty
+            ? "미저장 변경사항이 있습니다. 임시저장 여부와 별개로 프로젝트를 수동 저장하세요."
+            : "현재 작업의 미저장 변경사항이 없습니다."}
         </p>
       )}
 
-      <p className="mt-2 text-xs leading-5 text-slate-600">
-        적용된 입력만 저장합니다. 임시저장은 수동 저장이나 JSON 백업을 대신하지
-        않습니다.
-      </p>
-
-      {pending && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={recover} className="cp-button-primary">
-            이전 작업 복구
-          </button>
-
-          <button
-            type="button"
-            onClick={discard}
-            className="cp-button-secondary"
-          >
-            임시저장본 삭제
-          </button>
-        </div>
-      )}
-
       {message && (
-        <p role="status" className="mt-3 text-xs text-blue-800">
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-2 text-[11px] leading-5 text-slate-600"
+        >
           {message}
         </p>
       )}
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="mt-2 text-xs leading-5 text-red-700">
           {error}
         </p>
       )}
+
+      <details className="mt-2">
+        <summary className="cursor-pointer text-[11px] text-slate-500">
+          임시저장 범위
+        </summary>
+
+        <p className="mt-2 text-[11px] leading-5 text-slate-500">
+          적용된 입력과 마지막 계산 결과를 임시 보관합니다. 수정 적용 전 입력,
+          드래그 중 위치, 도면 배경 이미지는 복구 대상이 아닙니다. 복구한 계산
+          결과는 다시 계산한 뒤 사용하세요. 다른 기기와 동기화되지 않으며 JSON
+          백업을 대신하지 않습니다.
+        </p>
+      </details>
     </section>
   );
 }

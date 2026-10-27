@@ -653,6 +653,15 @@ export default function CeilingWorkspace({
     moveToSection(id);
   }
 
+  const showWelcome =
+    !dirty &&
+    snapshot === null &&
+    !inputs.name.trim() &&
+    !inputs.widthMm.trim() &&
+    !inputs.lengthMm.trim() &&
+    features.length === 0 &&
+    adjustments.length === 0;
+
   return (
     <div className="min-w-0">
       <a
@@ -781,6 +790,19 @@ export default function CeilingWorkspace({
         tabIndex={-1}
         className="p-3 pb-28 sm:p-4 sm:pb-28 min-[1280px]:pb-4"
       >
+        {!isSpaceEditor && (
+          <div className="mb-3">
+            <UsageGuide
+              showWelcome={showWelcome}
+              onStart={() => moveToSection("inputs")}
+              onLoadExample={() => {
+                projectManagerRef.current?.loadExample();
+                moveToSection("inputs");
+              }}
+              onOpenProjects={() => handleNavigate("projects")}
+            />
+          </div>
+        )}
         <details className="mb-3 rounded-lg border border-[var(--cp-border)] bg-white">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
             작업 확인

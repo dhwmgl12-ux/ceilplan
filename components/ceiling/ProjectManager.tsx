@@ -24,6 +24,7 @@ import { createExampleProject } from "@/lib/example-project";
 
 export interface ProjectManagerHandle {
   openList: () => void;
+  loadExample: () => void;
 }
 
 interface ProjectManagerProps {
@@ -56,6 +57,7 @@ export default function ProjectManager({
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [listOpen, setListOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -124,6 +126,7 @@ export default function ProjectManager({
 
     try {
       setProjects(readProjects());
+      setProjectSearch("");
       setListOpen(true);
     } catch (caught) {
       setError(
@@ -136,6 +139,7 @@ export default function ProjectManager({
 
   useImperativeHandle(ref, () => ({
     openList: handleOpenList,
+    loadExample: handleLoadExample,
   }));
 
   function canReplaceInputs() {
@@ -280,6 +284,13 @@ export default function ProjectManager({
       setImporting(false);
     }
   }
+
+  const searchKeyword = projectSearch.trim().toLocaleLowerCase("ko-KR");
+
+  const filteredProjects = projects.filter((project) =>
+    project.siteInput.name.toLocaleLowerCase("ko-KR").includes(searchKeyword),
+  );
+
   return (
     <section
       id="projects"
@@ -407,49 +418,113 @@ export default function ProjectManager({
 
       <div id="project-list" hidden={!listOpen}>
         <div className="mt-4 border-t border-slate-200 pt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">저장한 프로젝트</h3>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">
+                저장한 프로젝트
+              </h3>
+
+              <p className="mt-1 text-[11px] text-slate-500">
+                현재 브라우저 · {projects.length}개
+              </p>
+            </div>
 
             <button
               type="button"
               onClick={() => setListOpen(false)}
-              className="rounded px-2 py-1 text-xs text-slate-500"
+              className="cp-button-secondary"
             >
-              목록 닫기
+              닫기
             </button>
           </div>
 
           {projects.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">
-              저장한 프로젝트가 없습니다.
-            </p>
+            <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-700">
+                저장한 프로젝트가 없습니다
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                현재 작업을 저장하거나 예시 프로젝트로 시작하세요. 기존 JSON
+                파일은 추가 작업에서 가져올 수 있습니다.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleLoadExample}
+                disabled={importing}
+                className="cp-button-secondary mt-3"
+              >
+                예시로 시작하기
+              </button>
+            </div>
           ) : (
-            <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleLoad(project)}
-                    className="w-full rounded-lg border border-slate-200 p-3 text-left hover:border-blue-300 hover:bg-blue-50"
-                  >
-                    <span className="block text-sm font-semibold">
-                      {project.siteInput.name}
-                    </span>
+            <>
+              <label className="mt-3 block">
+                <span className="sr-only">프로젝트 이름 검색</span>
 
-                    <span className="mt-1 block text-xs text-slate-500">
-                      {project.siteInput.widthMm || "미입력"} ×{" "}
-                      {project.siteInput.lengthMm || "미입력"} mm
-                    </span>
+                <input
+                  type="search"
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                  placeholder="프로젝트 이름 검색"
+                  className="cp-input"
+                />
+              </label>
 
-                    <span className="mt-1 block text-xs text-slate-400">
-                      {new Date(project.updatedAt).toLocaleString("ko-KR", {
-                        timeZone: "Asia/Seoul",
-                      })}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+              {filteredProjects.length === 0 ? (
+                <p role="status" className="mt-3 text-xs text-slate-500">
+                  검색 결과가 없습니다. 다른 이름으로 검색하세요.
+                </p>
+              ) : (
+                <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+                  {filteredProjects.map((project) => (
+                    <li key={project.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleLoad(project)}
+                        disabled={importing}
+                        className={`w-full rounded-md border p-3 text-left transition-colors ${
+                          project.id === projectId
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="break-words text-sm font-semibold text-slate-800">
+                            {project.siteInput.name || "이름 없는 프로젝트"}
+                          </span>
+
+                          {project.id === projectId && (
+                            <span className="text-[11px] font-medium text-blue-700">
+                              현재 프로젝트
+                            </span>
+                          )}
+                        </span>
+
+                        <span className="mt-2 block text-xs text-slate-500">
+                          {project.siteInput.shape === "L"
+                            ? "ㄱ자"
+                            : project.siteInput.shape === "U"
+                              ? "ㄷ자"
+                              : "직사각형"}
+                          {" · "}
+                          {project.siteInput.widthMm || "미입력"} ×{" "}
+                          {project.siteInput.lengthMm || "미입력"} mm
+                        </span>
+
+                        <span className="mt-1 block text-[11px] text-slate-500">
+                          수정일{" "}
+                          {new Date(project.updatedAt).toLocaleString("ko-KR", {
+                            timeZone: "Asia/Seoul",
+                          })}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </div>
       </div>
