@@ -50,6 +50,8 @@ import { collectReviewItems, type ReviewTarget } from "@/lib/review";
 
 import CalculationPlansPanel from "./CalculationPlansPanel";
 
+import FeaturePropertiesPanel from "./FeaturePropertiesPanel";
+
 export interface SpaceEditorHandle {
   readSpace: () => CeilingSpace | null;
 }
@@ -202,6 +204,21 @@ export default function CeilingWorkspace({
         behavior: "auto",
         block: "center",
       });
+    });
+  }
+
+  function handleShowAdjustments() {
+    moveToSection("inputs");
+
+    requestAnimationFrame(() => {
+      const element = document.getElementById("adjustment-input-area");
+
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+
+      element?.focus({ preventScroll: true });
     });
   }
 
@@ -929,29 +946,45 @@ export default function CeilingWorkspace({
               onAddMany={handleAddManyFeatures}
             />
 
-            <AdjustmentInputPanel
-              key={`adjustments-${featureFormKey}`}
-              features={features}
-              adjustments={adjustments}
-              activeFeatureId={activeFeatureId}
-              onSelectFeature={handleSelectFeature}
-              onAdd={handleAddAdjustment}
-              onUpdate={handleUpdateAdjustment}
-              onDelete={handleDeleteAdjustment}
-            />
+            <div id="adjustment-input-area" tabIndex={-1}>
+              <AdjustmentInputPanel
+                key={`adjustments-${featureFormKey}`}
+                features={features}
+                adjustments={adjustments}
+                activeFeatureId={activeFeatureId}
+                onSelectFeature={handleSelectFeature}
+                onAdd={handleAddAdjustment}
+                onUpdate={handleUpdateAdjustment}
+                onDelete={handleDeleteAdjustment}
+              />
+            </div>
           </div>
 
-          <div id="preview" tabIndex={-1} className="cp-workspace-preview">
+          <div
+            id="preview"
+            tabIndex={-1}
+            className="cp-workspace-preview space-y-3"
+          >
             <CeilingPreview
               key={featureFormKey}
               inputs={inputs}
               features={features}
-              adjustments={adjustments}
               activeFeatureId={activeFeatureId}
               onSelectFeature={handleSelectFeature}
-              onShowSelectedInList={handleShowSelectedInList}
               onAdd={handleAddFeature}
               onUpdate={handleUpdateFeature}
+            />
+
+            <FeaturePropertiesPanel
+              key={`properties-${featureFormKey}`}
+              inputs={inputs}
+              features={features}
+              adjustments={adjustments}
+              activeFeatureId={activeFeatureId}
+              onUpdate={handleUpdateFeature}
+              onClearSelection={() => handleSelectFeature(null)}
+              onShowInList={handleShowSelectedInList}
+              onShowAdjustments={handleShowAdjustments}
             />
           </div>
 
@@ -960,7 +993,6 @@ export default function CeilingWorkspace({
             tabIndex={-1}
             className="cp-workspace-results space-y-4"
           >
-            <ResultsPanel snapshot={snapshot} stale={stale} />
             <ResultsPanel snapshot={snapshot} stale={stale} />
 
             <CalculationPlansPanel

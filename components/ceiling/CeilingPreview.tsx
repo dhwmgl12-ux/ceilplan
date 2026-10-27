@@ -12,7 +12,6 @@ import {
   type CeilingFeature,
   type SiteInput,
   type CeilingFeatureType,
-  type Adjustment,
 } from "@/types/ceilplan";
 
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
@@ -23,19 +22,16 @@ interface CeilingPreviewProps {
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
-  adjustments: Adjustment[];
+
   activeFeatureId: string | null;
   onSelectFeature: (id: string | null) => void;
-  onShowSelectedInList: () => void;
 }
 
 export default function CeilingPreview({
   inputs,
   features,
-  adjustments,
   activeFeatureId,
   onSelectFeature,
-  onShowSelectedInList,
   onAdd,
   onUpdate,
 }: CeilingPreviewProps) {
@@ -115,18 +111,6 @@ export default function CeilingPreview({
     onUpdate,
     onSelectFeature,
   });
-
-  const selectedFeature = features.find(
-    (feature) => feature.id === activeFeatureId,
-  );
-
-  const selectedFeatureNumber = selectedFeature
-    ? features.findIndex((feature) => feature.id === selectedFeature.id) + 1
-    : null;
-
-  const linkedAdjustments = adjustments.filter(
-    (adjustment) => adjustment.featureId === activeFeatureId,
-  );
 
   return (
     <section aria-labelledby="preview-title" className="cp-canvas-panel">
@@ -572,77 +556,6 @@ export default function CeilingPreview({
               pointerEvents="none"
               aria-hidden="true"
             />
-          )}
-          {selectedFeature && (
-            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold">
-                    선택: {selectedFeatureNumber}번{" "}
-                    {featureLabels[selectedFeature.type]}
-                  </h3>
-
-                  <p className="mt-2 text-xs leading-5 text-slate-600">
-                    X {selectedFeature.xMm}, Y {selectedFeature.yMm} mm
-                    <br />
-                    가로 {selectedFeature.widthMm} × 세로{" "}
-                    {selectedFeature.lengthMm} mm
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onSelectFeature(null)}
-                  className="cp-button-secondary"
-                >
-                  선택 해제
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={onShowSelectedInList}
-                className="cp-button-secondary mt-3"
-              >
-                요소 목록으로 이동
-              </button>
-
-              <h4 className="mt-4 text-xs font-semibold">
-                연결된 조정값 {linkedAdjustments.length}개
-              </h4>
-
-              {linkedAdjustments.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  연결된 조정값이 없습니다.
-                </p>
-              ) : (
-                <ul className="mt-2 space-y-2">
-                  {linkedAdjustments.map((adjustment) => (
-                    <li
-                      key={adjustment.id}
-                      className="rounded bg-white p-2 text-xs leading-5"
-                    >
-                      <p className="font-medium">
-                        {adjustment.materialId === "BOARD"
-                          ? "석고보드"
-                          : adjustment.materialId === "MBAR"
-                            ? "M-BAR"
-                            : "캐링채널"}
-                        {" · "}
-                        {adjustment.adjustmentType === "ADD"
-                          ? "추가"
-                          : "공제"}{" "}
-                        {adjustment.quantity} {adjustment.unit}
-                      </p>
-
-                      <p className="break-words text-slate-600">
-                        {adjustment.memo}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
           )}
         </svg>
       ) : (
