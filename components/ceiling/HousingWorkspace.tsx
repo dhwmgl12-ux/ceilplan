@@ -20,6 +20,7 @@ import { downloadText } from "@/lib/download";
 import DraftRecovery from "./DraftRecovery";
 import { HOUSING_DRAFT_KEY } from "@/lib/draft-storage";
 import { normalizeHousingProject } from "@/lib/housing-io";
+import ToolSection from "@/components/ui/ToolSection";
 
 function createSpace(name: string): CeilingSpace {
   return {
@@ -436,18 +437,35 @@ export default function HousingWorkspace() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white p-4 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">세대 타입·공간 관리</h1>
+    <div className="cp-housing-page">
+      <header className="border-b border-[var(--cp-border)] bg-white px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-slate-500">
+              작업 공간 / 다중 공간
+            </p>
+
+            <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+              세대 타입·공간 관리
+            </h1>
+          </div>
 
           <Link
             href="/"
             onClick={(event) => {
               if (
+                event.ctrlKey ||
+                event.metaKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
+
+              if (
                 dirty &&
                 !window.confirm(
-                  "저장하지 않은 다중 공간 입력이 사라집니다. 단일 공간 화면으로 이동할까요?",
+                  "저장하지 않은 변경사항이 있습니다. 단일 공간 화면으로 이동할까요?",
                 )
               ) {
                 event.preventDefault();
@@ -455,32 +473,61 @@ export default function HousingWorkspace() {
             }}
             className="cp-button-secondary"
           >
-            단일 공간 화면
+            단일 공간으로
           </Link>
         </div>
 
-        <p className="mt-3 text-sm leading-6 text-amber-800">
-          다중 공간 프로젝트는 브라우저에 저장할 수 있습니다. 다른 기기와
-          동기화되지 않으므로 필요한 자료는 JSON으로 백업하세요.
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="block min-w-0 flex-1">
+            <span className="mb-2 block text-xs font-medium text-slate-700">
+              프로젝트명
+            </span>
+
+            <input
+              value={project.name}
+              onChange={(event) => {
+                const name = event.target.value;
+
+                setProject((previous) => ({
+                  ...previous,
+                  name,
+                }));
+
+                setDirty(true);
+                setReportStale(true);
+              }}
+              placeholder="현장 또는 프로젝트 이름"
+              className="cp-input"
+            />
+          </label>
+
+          <span
+            className={`rounded-md px-3 py-2 text-xs font-medium ${
+              dirty
+                ? "bg-amber-50 text-amber-800"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {dirty ? "미저장 변경사항" : "미저장 변경사항 없음"}
+          </span>
+        </div>
+
+        <p className="mt-2 text-[11px] leading-5 text-slate-500">
+          프로젝트 안에 세대 타입을 만들고, 한 세대의 공간을 구성합니다. 타입별
+          세대 수는 전체 계산에 적용됩니다.
         </p>
-
-        <label className="mt-4 block max-w-xl text-sm font-medium">
-          프로젝트명
-          <input
-            value={project.name}
-            onChange={(event) => {
-              const name = event.target.value;
-
-              setProject((previous) => ({ ...previous, name }));
-              setDirty(true);
-              setReportStale(true);
-            }}
-            className="cp-input mt-2"
-          />
-        </label>
       </header>
 
-      <div className="m-4 sm:m-6">
+      <div className="cp-housing-section">
+        <HousingProjectManager
+          getProject={readCurrentProject}
+          dirty={dirty}
+          onSaved={handleSaved}
+          onLoad={handleRestore}
+        />
+      </div>
+
+      <div className="cp-housing-section">
         <DraftRecovery
           storageKey={HOUSING_DRAFT_KEY}
           dirty={dirty}
@@ -490,220 +537,320 @@ export default function HousingWorkspace() {
         />
       </div>
 
-      <div className="m-4 sm:m-6">
-        <HousingProjectManager
-          getProject={readCurrentProject}
-          dirty={dirty}
-          onSaved={handleSaved}
-          onLoad={handleRestore}
-        />
-      </div>
+      <section
+        aria-labelledby="housing-selection-title"
+        className="cp-housing-section cp-card"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="housing-selection-title" className="cp-title">
+            편집할 공간
+          </h2>
 
-      <section className="m-4 rounded-xl border border-slate-200 bg-white p-4 sm:m-6">
-        <h2 className="cp-title">세대 타입</h2>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {project.unitTypes.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => selectType(type.id)}
-              aria-pressed={activeTypeId === type.id}
-              className={
-                activeTypeId === type.id
-                  ? "cp-button-primary"
-                  : "cp-button-secondary"
-              }
-            >
-              {type.name} · {type.unitCount}세대
-            </button>
-          ))}
+          <span className="text-[11px] text-slate-500">
+            {project.unitTypes.length}개 타입
+            {activeType && ` · 선택 타입 ${activeType.spaces.length}개 공간`}
+          </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-end gap-2">
-          <label className="min-w-0 flex-1 text-sm font-medium">
-            새 타입 이름
-            <input
-              value={newTypeName}
-              onChange={(event) => setNewTypeName(event.target.value)}
-              placeholder="예: 84A"
-              className="cp-input mt-2"
-            />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block min-w-0">
+            <span className="mb-2 block text-xs font-medium text-slate-700">
+              세대 타입
+            </span>
+
+            <select
+              value={activeTypeId ?? ""}
+              disabled={project.unitTypes.length === 0}
+              onChange={(event) => selectType(event.target.value)}
+              className="cp-input"
+            >
+              <option value="" disabled>
+                타입을 추가하세요
+              </option>
+
+              {project.unitTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name} · {type.unitCount}세대
+                </option>
+              ))}
+            </select>
           </label>
 
-          <button
-            type="button"
-            onClick={addType}
-            className="cp-button-secondary"
-          >
-            타입 추가
-          </button>
+          <label className="block min-w-0">
+            <span className="mb-2 block text-xs font-medium text-slate-700">
+              공간
+            </span>
+
+            <select
+              value={activeSpaceId ?? ""}
+              disabled={!activeType || activeType.spaces.length === 0}
+              onChange={(event) => selectSpace(event.target.value)}
+              className="cp-input"
+            >
+              <option value="" disabled>
+                공간을 추가하세요
+              </option>
+
+              {activeType?.spaces.map((space) => (
+                <option key={space.id} value={space.id}>
+                  {space.siteInput.name || "이름 없는 공간"}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        {activeType && (
-          <>
-            <UnitTypeEditor
-              key={`${editorEpoch}:${activeType.id}`}
-              unitType={activeType}
-              onApply={updateType}
-            />
+        <details
+          open={project.unitTypes.length === 0}
+          className="cp-tool-section mt-4"
+        >
+          <summary className="cp-tool-summary">
+            <span className="cp-tool-heading">
+              <span className="cp-tool-title">타입·공간 추가 및 관리</span>
+            </span>
 
-            <button
-              type="button"
-              onClick={deleteType}
-              className="mt-3 min-h-11 rounded px-3 text-sm text-red-700"
-            >
-              선택 타입 삭제
-            </button>
+            <span className="cp-tool-description">
+              새 타입·공간을 추가하거나 선택한 타입을 수정합니다.
+            </span>
+          </summary>
 
-            <h3 className="mt-5 text-sm font-semibold">
-              {activeType.name}의 공간
-            </h3>
+          <div className="cp-tool-body space-y-5">
+            <div>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-0 flex-1">
+                  <span className="mb-2 block text-xs font-medium text-slate-700">
+                    새 타입 이름
+                  </span>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              {activeType.spaces.map((space) => (
-                <button
-                  key={space.id}
-                  type="button"
-                  onClick={() => selectSpace(space.id)}
-                  aria-pressed={activeSpaceId === space.id}
-                  className={
-                    activeSpaceId === space.id
-                      ? "cp-button-primary"
-                      : "cp-button-secondary"
-                  }
-                >
-                  {space.siteInput.name || "이름 없는 공간"}
-                </button>
-              ))}
-            </div>
+                  <input
+                    value={newTypeName}
+                    onChange={(event) => setNewTypeName(event.target.value)}
+                    placeholder="예: 84A"
+                    className="cp-input"
+                  />
+                </label>
 
-            <div className="mt-4 flex flex-wrap items-end gap-2">
-              <label className="min-w-0 flex-1 text-sm font-medium">
-                새 공간 이름
-                <input
-                  value={newSpaceName}
-                  onChange={(event) => setNewSpaceName(event.target.value)}
-                  placeholder="예: 거실"
-                  className="cp-input mt-2"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={addSpace}
-                className="cp-button-secondary"
-              >
-                공간 추가
-              </button>
-
-              {activeSpace && (
                 <button
                   type="button"
-                  onClick={deleteSpace}
-                  className="min-h-11 rounded px-3 text-sm text-red-700"
+                  onClick={addType}
+                  className="cp-button-secondary"
                 >
-                  선택 공간 삭제
+                  타입 추가
                 </button>
-              )}
+              </div>
             </div>
-          </>
+
+            {activeType && (
+              <>
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-xs font-semibold text-slate-700">
+                    선택 타입: {activeType.name}
+                  </p>
+
+                  <UnitTypeEditor
+                    key={`${editorEpoch}:${activeType.id}`}
+                    unitType={activeType}
+                    onApply={updateType}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={deleteType}
+                    className="mt-3 min-h-11 rounded-md px-3 text-xs font-medium text-red-700 hover:bg-red-50"
+                  >
+                    선택 타입 삭제
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="min-w-0 flex-1">
+                      <span className="mb-2 block text-xs font-medium text-slate-700">
+                        {activeType.name}에 추가할 공간
+                      </span>
+
+                      <input
+                        value={newSpaceName}
+                        onChange={(event) =>
+                          setNewSpaceName(event.target.value)
+                        }
+                        placeholder="예: 거실, 주방"
+                        className="cp-input"
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={addSpace}
+                      className="cp-button-secondary"
+                    >
+                      공간 추가
+                    </button>
+                  </div>
+
+                  {activeSpace && (
+                    <button
+                      type="button"
+                      onClick={deleteSpace}
+                      className="mt-3 min-h-11 rounded-md px-3 text-xs font-medium text-red-700 hover:bg-red-50"
+                    >
+                      선택 공간 삭제
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            <p className="text-[11px] leading-6 text-slate-500">
+              타입 수정은 ‘타입 수정 적용’을 눌러 반영합니다. 적용된 공간 입력은
+              전환 전에 보관됩니다. 공간 전환 시 편집 이력·미적용 입력·도면
+              배경은 초기화됩니다.
+            </p>
+          </div>
+        </details>
+
+        {activeType && activeType.spaces.length === 0 && (
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            선택한 타입에 공간이 없습니다. ‘타입·공간 추가 및 관리’를 열어 첫
+            공간을 추가하세요.
+          </p>
         )}
 
-        <p className="mt-4 text-xs leading-5 text-slate-500">
-          타입 변경은 ‘타입 수정 적용’, 요소·조정값 변경은 각 ‘수정 적용’을
-          눌러주세요. 적용된 입력은 공간 전환 전에 보관됩니다. 전환하면 해당
-          편집기의 실행 취소 이력과 적용 전 임시 입력은 초기화됩니다.
-        </p>
-
         {error && (
-          <p role="alert" className="mt-4 text-sm text-red-700">
+          <p role="alert" className="mt-3 text-sm text-red-700">
             {error}
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={calculateAll}
-          className="cp-button-primary mt-4"
-        >
-          전체 타입·공간 계산
-        </button>
-      </section>
-
-      {report && (
-        <section className="cp-card m-4 sm:m-6">
-          <h2 className="cp-title">{report.project.name} · 전체 계산 요약</h2>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <p className="text-[11px] leading-5 text-slate-500">
+            공간별 발주 올림 후 타입별 세대 수를 적용합니다.
+          </p>
 
           <button
             type="button"
-            onClick={handleDownloadHousingCsv}
-            disabled={reportStale}
-            className="cp-button-secondary mt-3"
+            onClick={calculateAll}
+            disabled={project.unitTypes.length === 0}
+            className="cp-button-primary"
           >
-            전체 산출 CSV 다운로드
+            전체 타입·공간 계산
           </button>
+        </div>
+      </section>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            계산 시각:{" "}
+      {report && (
+        <section
+          aria-labelledby="housing-report-title"
+          className="cp-housing-section cp-card"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="housing-report-title" className="cp-title">
+              전체 계산 요약
+            </h2>
+
+            <button
+              type="button"
+              onClick={handleDownloadHousingCsv}
+              disabled={reportStale}
+              className="cp-button-secondary"
+            >
+              전체 CSV 다운로드
+            </button>
+          </div>
+
+          <p className="mt-2 break-words text-xs text-slate-600">
+            {report.project.name}
+          </p>
+
+          <p className="mt-1 text-[11px] text-slate-500">
+            계산 시각{" "}
             {new Date(report.calculatedAt).toLocaleString("ko-KR", {
               timeZone: "Asia/Seoul",
             })}
           </p>
 
           {reportStale && (
-            <p role="status" className="mt-3 text-sm text-amber-800">
-              아래는 이전 계산입니다. 전체 계산을 다시 실행하세요.
+            <p
+              role="status"
+              className="mt-3 rounded-md bg-amber-50 p-3 text-xs leading-5 text-amber-900"
+            >
+              아래는 이전 전체 계산 결과입니다. 전체 타입·공간 계산을 다시
+              실행하세요.
             </p>
           )}
 
-          <p className="mt-3 text-sm">
-            {report.result.totalUnitCount}세대 ·{" "}
-            {report.result.totalAreaM2.toLocaleString("ko-KR")}㎡
-          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">전체 세대·면적</p>
 
-          <p className="mt-2 text-xl font-bold text-emerald-700">
-            {money(report.result.totalEstimatedCost)}
-          </p>
+              <p className="mt-2 break-words text-lg font-semibold tabular-nums">
+                {report.result.totalUnitCount.toLocaleString("ko-KR")}세대
+              </p>
 
-          <ul className="mt-4 space-y-3">
-            {report.result.unitTypes.map((type) => (
-              <li
-                key={type.unitTypeId}
-                className="rounded-lg bg-slate-50 p-3 text-sm"
-              >
-                <p className="font-semibold">
-                  {type.unitTypeName} · {type.unitCount}세대
-                </p>
+              <p className="mt-1 text-xs text-slate-600">
+                {report.result.totalAreaM2.toLocaleString("ko-KR")} ㎡
+              </p>
+            </div>
 
-                <p className="mt-1">
-                  한 세대: {money(type.costPerUnit)}
-                  {" / "}
-                  타입 전체: {money(type.totalEstimatedCost)}
-                </p>
+            <div className="rounded-md bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">
+                전체 예상 자재비 · VAT 별도
+              </p>
 
-                <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                  {type.spaces.map((space) => (
-                    <li key={space.spaceId}>
-                      {space.spaceName}:{" "}
-                      {money(space.result.totalEstimatedCost)}
-                      {" · 한 공간·한 세대 기준"}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+              <p className="mt-2 break-words text-lg font-semibold tabular-nums">
+                {money(report.result.totalEstimatedCost)}
+              </p>
+            </div>
+          </div>
 
-          <p className="mt-3 text-xs leading-5 text-slate-500">
-            공간별 발주 올림 후 합산하고 세대 수를 적용합니다. 공간 간 잔재
-            공유와 공동 발주 최적화는 포함하지 않습니다.
+          <ToolSection
+            title="타입·공간별 금액"
+            description="한 세대와 타입 전체 금액을 구분해서 확인합니다."
+            className="mt-4"
+          >
+            <ul className="space-y-3">
+              {report.result.unitTypes.map((type) => (
+                <li
+                  key={type.unitTypeId}
+                  className="rounded-md bg-slate-50 p-3"
+                >
+                  <p className="break-words text-sm font-semibold">
+                    {type.unitTypeName} · {type.unitCount}세대
+                  </p>
+
+                  <p className="mt-2 text-xs leading-6 text-slate-600">
+                    한 세대: {money(type.costPerUnit)}
+                    <br />
+                    타입 전체: {money(type.totalEstimatedCost)}
+                  </p>
+
+                  <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                    {type.spaces.map((space) => (
+                      <li
+                        key={space.spaceId}
+                        className="text-xs leading-5 text-slate-600"
+                      >
+                        <span className="font-medium">{space.spaceName}</span>
+                        {" · "}
+                        {money(space.result.totalEstimatedCost)}
+                        {" · 한 공간·한 세대 기준"}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </ToolSection>
+
+          <p className="mt-3 text-[11px] leading-6 text-slate-500">
+            공간 간 잔재 공유와 공동 발주 최적화는 포함하지 않습니다. 단가
+            미입력이 있으면 전체 금액은 미완성으로 표시합니다.
           </p>
         </section>
       )}
 
       {activeSpace ? (
-        <div id="dashboard">
+        <div id="dashboard" className="min-w-0">
           <CeilingWorkspace
             key={`${editorEpoch}:${activeTypeId}:${activeSpace.id}`}
             ref={editorRef}
@@ -714,9 +861,16 @@ export default function HousingWorkspace() {
           />
         </div>
       ) : (
-        <p className="m-6 text-sm text-slate-500">
-          타입과 공간을 추가한 뒤 편집하세요.
-        </p>
+        <section className="cp-housing-section rounded-lg border border-dashed border-slate-300 bg-white p-6">
+          <h2 className="text-sm font-semibold text-slate-700">
+            편집할 공간을 준비하세요
+          </h2>
+
+          <p className="mt-2 text-xs leading-6 text-slate-500">
+            저장한 프로젝트를 열거나, 타입을 만든 뒤 거실·주방 등의 공간을
+            추가하세요. 공간을 선택하면 설계 캔버스와 입력 패널이 표시됩니다.
+          </p>
+        </section>
       )}
     </div>
   );

@@ -490,6 +490,47 @@ summary {
   }
 }
 
+/* 다중 공간 작업 화면 */
+.cp-housing-page {
+  min-width: 0;
+  min-height: 100dvh;
+  padding-bottom: 7rem;
+}
+
+.cp-housing-section {
+  min-width: 0;
+  margin: 12px;
+}
+
+/* 포커스로 이동한 영역의 외곽선이 잘리지 않도록 여유 확보 */
+#inputs,
+#preview,
+#workspace-results,
+#adjustment-input-area {
+  scroll-margin-top: 6rem;
+}
+
+@media (min-width: 640px) {
+  .cp-housing-section {
+    margin: 16px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .cp-housing-page {
+    padding-bottom: 24px;
+  }
+
+  /*
+   * 캔버스와 속성 패널이 함께 길어질 수 있으므로
+   * 화면 전체가 아닌 캔버스만 다음 단계에서 고정 여부를 검토합니다.
+   * 현재는 하단 속성에 접근할 수 있도록 자연스럽게 스크롤합니다.
+   */
+  .cp-workspace-preview {
+    position: static;
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;

@@ -93,9 +93,16 @@ export default function HousingProjectManager({
 
   function handleOpenList() {
     try {
-      setProjects(readHousingProjects());
+      const stored = readHousingProjects();
+
+      setProjects(stored);
       setError("");
-      setMessage("저장한 다중 공간 프로젝트 목록입니다.");
+
+      setMessage(
+        stored.length > 0
+          ? "저장한 다중 공간 프로젝트를 선택하세요."
+          : "저장한 다중 공간 프로젝트가 없습니다. 현재 프로젝트를 저장하거나 JSON 파일을 가져오세요.",
+      );
     } catch (caught) {
       showError(caught);
     }
@@ -103,9 +110,16 @@ export default function HousingProjectManager({
 
   function handleOpenLegacy() {
     try {
-      setLegacyProjects(readProjects());
+      const stored = readProjects();
+
+      setLegacyProjects(stored);
       setError("");
-      setMessage("변환할 단일 공간 프로젝트를 선택하세요. 원본은 유지됩니다.");
+
+      setMessage(
+        stored.length > 0
+          ? "변환할 단일 공간 프로젝트를 선택하세요. 원본은 유지됩니다."
+          : "변환할 단일 공간 프로젝트가 없습니다. 단일 공간 화면에서 먼저 프로젝트를 저장하세요.",
+      );
     } catch (caught) {
       showError(caught);
     }
@@ -212,48 +226,60 @@ export default function HousingProjectManager({
         다중 공간 프로젝트 저장·백업
       </h2>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={handleSave}
           disabled={importing}
           className="cp-button-primary"
         >
-          다중 공간 저장
+          프로젝트 저장
         </button>
 
         <button
           type="button"
           onClick={handleOpenList}
-          className="cp-button-secondary"
-        >
-          저장 목록
-        </button>
-
-        <button
-          type="button"
-          onClick={handleOpenLegacy}
-          className="cp-button-secondary"
-        >
-          기존 단일 공간 변환
-        </button>
-
-        <button
-          type="button"
-          onClick={handleExport}
-          className="cp-button-secondary"
-        >
-          JSON 내보내기
-        </button>
-
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
           disabled={importing}
           className="cp-button-secondary"
         >
-          {importing ? "가져오는 중…" : "JSON 가져오기"}
+          목록 열기
         </button>
+
+        <details className="rounded-md border border-slate-200 bg-white">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            추가 작업
+            <span aria-hidden="true">⌄</span>
+          </summary>
+
+          <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3">
+            <button
+              type="button"
+              onClick={handleOpenLegacy}
+              disabled={importing}
+              className="cp-button-secondary"
+            >
+              단일 공간 복사·변환
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={importing}
+              className="cp-button-secondary"
+            >
+              JSON 내보내기
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="cp-button-secondary"
+            >
+              {importing ? "가져오는 중…" : "JSON 가져오기"}
+            </button>
+          </div>
+        </details>
 
         <input
           ref={fileRef}
@@ -303,9 +329,17 @@ export default function HousingProjectManager({
                   onClick={() => handleLoad(project)}
                   className="w-full rounded-lg border border-slate-200 p-3 text-left text-sm hover:bg-blue-50"
                 >
-                  {project.name}
-                  <span className="ml-2 text-xs text-slate-500">
+                  <span className="block break-words font-medium">
+                    {project.name}
+                  </span>
+
+                  <span className="mt-1 block text-xs text-slate-500">
                     {project.unitTypes.length}개 타입
+                    {" · "}
+                    수정일{" "}
+                    {new Date(project.updatedAt).toLocaleString("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                    })}
                   </span>
                 </button>
               </li>
