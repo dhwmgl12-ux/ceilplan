@@ -269,6 +269,104 @@ summary {
   }
 }
 
+/* 작업 화면 도구 모음 */
+.cp-workspace-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 10px 16px;
+
+  border-bottom: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+}
+
+/* 작은 화면: 선택한 작업 영역만 표시 */
+.cp-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.cp-workspace-input,
+.cp-workspace-preview,
+.cp-workspace-results {
+  min-width: 0;
+  scroll-margin-top: 6rem;
+}
+
+.cp-workspace-input,
+.cp-workspace-preview,
+.cp-workspace-results {
+  display: none;
+}
+
+.cp-workspace[data-section="inputs"] > .cp-workspace-input,
+.cp-workspace[data-section="preview"] > .cp-workspace-preview,
+.cp-workspace[data-section="results"] > .cp-workspace-results {
+  display: block;
+}
+
+/* 데스크톱: 캔버스를 중심으로 필요한 패널만 표시 */
+@media (min-width: 1280px) {
+  .cp-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-workspace[data-input-open="true"] {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .cp-workspace[data-result-open="true"] {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  .cp-workspace[data-input-open="true"][data-result-open="true"] {
+    grid-template-columns: 280px minmax(0, 1fr) 340px;
+  }
+
+  /* 작은 화면용 선택 상태를 초기화 */
+  .cp-workspace > .cp-workspace-input,
+  .cp-workspace > .cp-workspace-results {
+    display: none;
+  }
+
+  .cp-workspace > .cp-workspace-preview {
+    display: block;
+  }
+
+  .cp-workspace[data-input-open="true"] > .cp-workspace-input,
+  .cp-workspace[data-result-open="true"] > .cp-workspace-results {
+    display: block;
+  }
+
+  .cp-workspace-preview {
+    position: sticky;
+    top: 76px;
+  }
+}
+
+/* 넓은 모니터에서는 보조 패널도 조금 넓게 */
+@media (min-width: 1800px) {
+  .cp-workspace[data-input-open="true"] {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .cp-workspace[data-result-open="true"] {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+
+  .cp-workspace[data-input-open="true"][data-result-open="true"] {
+    grid-template-columns: 300px minmax(0, 1fr) 380px;
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;

@@ -139,6 +139,12 @@ export default function CeilingWorkspace({
   const [projectManagerKey, setProjectManagerKey] = useState(0);
   const [historyMessage, setHistoryMessage] = useState("");
 
+  const [workspaceSection, setWorkspaceSection] = useState<
+    "inputs" | "preview" | "results"
+  >("inputs");
+
+  const [inputPanelOpen, setInputPanelOpen] = useState(true);
+  const [resultPanelOpen, setResultPanelOpen] = useState(false);
   const editingSpaceId = initialSpace?.id;
 
   useImperativeHandle(ref, () => ({
@@ -179,6 +185,8 @@ export default function CeilingWorkspace({
 
   function handleShowSelectedInList() {
     if (!activeFeatureId) return;
+
+    moveToSection("inputs");
 
     if (featureDetailsRef.current) {
       featureDetailsRef.current.open = true;
@@ -257,6 +265,8 @@ export default function CeilingWorkspace({
 
   function handleReviewNavigate(target: ReviewTarget) {
     if (target === "FEATURES") {
+      moveToSection("inputs");
+
       if (featureDetailsRef.current) {
         featureDetailsRef.current.open = true;
       }
@@ -309,6 +319,8 @@ export default function CeilingWorkspace({
     ];
 
     if (validationErrors.length > 0) {
+      setWorkspaceSection("inputs");
+      setInputPanelOpen(true);
       setErrors(validationErrors);
 
       if (snapshot) {
@@ -355,6 +367,9 @@ export default function CeilingWorkspace({
 
       moveAfterCalculation("results");
     } catch (error) {
+      setWorkspaceSection("inputs");
+      setInputPanelOpen(true);
+
       setErrors([
         error instanceof Error ? error.message : "계산 중 오류가 발생했습니다.",
       ]);
@@ -575,34 +590,50 @@ export default function CeilingWorkspace({
 
     if (menu === "projects") {
       projectManagerRef.current?.openList();
+
+      requestAnimationFrame(() => {
+        document.getElementById("projects")?.scrollIntoView({
+          behavior: "auto",
+          block: "start",
+        });
+      });
+
+      return;
     }
 
-    const targetId = menu === "dashboard" ? "dashboard" : menu;
-
-    document.getElementById(targetId)?.scrollIntoView({
-      behavior: "auto",
-      block: "start",
-    });
+    moveToSection(menu === "results" ? "results" : "preview");
   }
 
   function moveToSection(id: "inputs" | "preview" | "results") {
+    setWorkspaceSection(id);
     setActiveMenu(id === "results" ? "results" : "dashboard");
 
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "auto",
-      block: "start",
+    if (id === "inputs") {
+      setInputPanelOpen(true);
+    }
+
+    if (id === "results") {
+      setResultPanelOpen(true);
+    }
+
+    requestAnimationFrame(() => {
+      const targetId = id === "results" ? "workspace-results" : id;
+
+      const element = document.getElementById(targetId);
+
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+
+      element?.focus({ preventScroll: true });
     });
   }
 
   function moveAfterCalculation(id: "inputs" | "results") {
-    if (!window.matchMedia("(max-width: 1279px)").matches) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      moveToSection(id);
-    });
+    moveToSection(id);
   }
+
   return (
     <div className="min-w-0">
       <a
@@ -654,43 +685,101 @@ export default function CeilingWorkspace({
         </>
       )}
 
-      <nav
-        aria-label="작업 영역 바로가기"
-        className="sticky top-0 z-10 grid grid-cols-3 gap-2 border-b border-slate-200 bg-white px-4 py-2 min-[1280px]:hidden"
-      >
-        <button
-          type="button"
-          onClick={() => moveToSection("inputs")}
-          className="cp-button-secondary"
-        >
-          입력
-        </button>
+      <nav aria-label="작업 화면 구성" className="cp-workspace-toolbar">
+        {/* 작은 화면에서는 작업 영역 전환 */}
+        <div className="grid w-full grid-cols-3 gap-1 min-[1280px]:hidden">
+          {(
+            [
+              ["inputs", "입력"],
+              ["preview", "캔버스"],
+              ["results", "결과"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => moveToSection(id)}
+              aria-pressed={workspaceSection === id}
+              aria-controls={id === "results" ? "workspace-results" : id}
+              className={
+                workspaceSection === id
+                  ? "cp-button-primary"
+                  : "cp-button-secondary"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => moveToSection("preview")}
-          className="cp-button-secondary"
-        >
-          미리보기
-        </button>
+        {/* 넓은 화면에서는 양옆 패널 접기·펼치기 */}
+        <div className="hidden items-center gap-2 min-[1280px]:flex">
+          <button
+            type="button"
+            onClick={() => setInputPanelOpen((previous) => !previous)}
+            aria-expanded={inputPanelOpen}
+            aria-controls="inputs"
+            className="cp-button-secondary"
+          >
+            {inputPanelOpen ? "입력 패널 접기" : "입력 패널 열기"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => moveToSection("results")}
-          className="cp-button-secondary"
-        >
-          결과
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputPanelOpen(false);
+              setResultPanelOpen(false);
+              moveToSection("preview");
+            }}
+            aria-pressed={!inputPanelOpen && !resultPanelOpen}
+            className="cp-button-secondary"
+          >
+            캔버스 집중
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setResultPanelOpen((previous) => !previous)}
+            aria-expanded={resultPanelOpen}
+            aria-controls="workspace-results"
+            className="cp-button-secondary"
+          >
+            {resultPanelOpen ? "결과 패널 접기" : "결과 패널 열기"}
+          </button>
+        </div>
+
+        <p className="hidden text-xs text-slate-500 min-[1280px]:block">
+          {stale
+            ? "입력 변경 · 재계산 필요"
+            : snapshot
+              ? "계산 결과 있음"
+              : "공간 치수를 입력해 시작하세요"}
+        </p>
       </nav>
 
       <main
         id="main-content"
         tabIndex={-1}
-        className="p-4 pb-28 sm:p-6 sm:pb-28 min-[1280px]:pb-6"
+        className="p-3 pb-28 sm:p-4 sm:pb-28 min-[1280px]:pb-4"
       >
-        <div className="mb-4">
-          <ReviewPanel items={reviewItems} onNavigate={handleReviewNavigate} />
-        </div>
+        <details className="mb-3 rounded-lg border border-[var(--cp-border)] bg-white">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
+            작업 확인
+            <span className="ml-2 text-xs text-slate-500">
+              오류 {reviewItems.filter((item) => item.level === "ERROR").length}
+              개 · 확인 필요{" "}
+              {reviewItems.filter((item) => item.level === "CHECK").length}개
+            </span>
+          </summary>
+
+          <div className="border-t border-[var(--cp-border)] p-3">
+            <ReviewPanel
+              items={reviewItems}
+              onNavigate={handleReviewNavigate}
+            />
+          </div>
+        </details>
+
         {!isSpaceEditor && (
           <div className="mb-4">
             <DraftRecovery
@@ -738,8 +827,17 @@ export default function CeilingWorkspace({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-4 min-[1280px]:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,5fr)]">
-          <div id="inputs" className="min-w-0 space-y-4">
+        <div
+          className="cp-workspace"
+          data-section={workspaceSection}
+          data-input-open={inputPanelOpen}
+          data-result-open={resultPanelOpen}
+        >
+          <div
+            id="inputs"
+            tabIndex={-1}
+            className="cp-workspace-input space-y-4"
+          >
             <InputPanel
               inputs={inputs}
               onChange={handleInputChange}
@@ -843,7 +941,7 @@ export default function CeilingWorkspace({
             />
           </div>
 
-          <div id="preview" className="min-w-0">
+          <div id="preview" tabIndex={-1} className="cp-workspace-preview">
             <CeilingPreview
               key={featureFormKey}
               inputs={inputs}
@@ -857,7 +955,12 @@ export default function CeilingWorkspace({
             />
           </div>
 
-          <div className="min-w-0 space-y-4">
+          <div
+            id="workspace-results"
+            tabIndex={-1}
+            className="cp-workspace-results space-y-4"
+          >
+            <ResultsPanel snapshot={snapshot} stale={stale} />
             <ResultsPanel snapshot={snapshot} stale={stale} />
 
             <CalculationPlansPanel
