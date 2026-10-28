@@ -1,7 +1,14 @@
 import type { MaterialInput } from "@/types/ceilplan";
 import NumberField from "@/components/ui/NumberField";
+import { useImperativeHandle, useRef, type Ref } from "react";
+
+export interface MaterialInputPanelHandle {
+  focusFirstPriceError: () => boolean;
+}
 
 interface MaterialInputPanelProps {
+  ref?: Ref<MaterialInputPanelHandle>;
+  showValidation?: boolean;
   inputs: MaterialInput;
   onChange: (field: keyof MaterialInput, value: string) => void;
 }
@@ -123,7 +130,11 @@ const priceFields: FieldDefinition[] = [
 export default function MaterialInputPanel({
   inputs,
   onChange,
+  ref,
+  showValidation = false,
 }: MaterialInputPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const priceDetailsRef = useRef<HTMLDetailsElement>(null);
   const enteredPriceCount = priceFields.filter(
     (field) => inputs[field.key].trim() !== "",
   ).length;
@@ -137,13 +148,62 @@ export default function MaterialInputPanel({
         min={field.min}
         step={field.step}
         value={inputs[field.key]}
+        name={field.key}
+        error={getPriceError(field.key)}
         onChange={(value) => onChange(field.key, value)}
       />
     ));
   }
 
+  function getPriceError(field: keyof MaterialInput): string | undefined {
+    const isPriceField = priceFields.some((item) => item.key === field);
+
+    if (!showValidation || !isPriceField) return undefined;
+
+    const raw = inputs[field];
+
+    // 단가 공란은 기존 계산 정책에서 허용합니다.
+    if (!raw.trim()) return undefined;
+
+    const value = Number(raw);
+
+    if (!Number.isFinite(value) || value < 0) {
+      return "단가는 0 이상의 숫자로 입력하세요.";
+    }
+
+    return undefined;
+  }
+
+  useImperativeHandle(ref, () => ({
+    focusFirstPriceError() {
+      const firstError = priceFields.find(
+        (field) => getPriceError(field.key) !== undefined,
+      );
+
+      if (!firstError || !priceDetailsRef.current) {
+        return false;
+      }
+
+      priceDetailsRef.current.open = true;
+
+      const input = panelRef.current?.querySelector<HTMLInputElement>(
+        `input[name="${firstError.key}"]`,
+      );
+
+      if (!input) return false;
+
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+
+      return true;
+    },
+  }));
+
   return (
-    <div className="space-y-3">
+    <div ref={panelRef} className="space-y-3">
       <section aria-labelledby="material-input-title" className="cp-card">
         <h2 id="material-input-title" className="cp-title">
           계산 조건
@@ -200,7 +260,10 @@ export default function MaterialInputPanel({
         </p>
       </section>
 
-      <details className="rounded-[var(--cp-radius-lg)] border border-[var(--cp-border)] bg-white">
+      <details
+        ref={priceDetailsRef}
+        className="rounded-[var(--cp-radius-lg)] border border-[var(--cp-border)] bg-white"
+      >
         <summary className="cursor-pointer rounded-[var(--cp-radius-lg)] px-4 py-4 sm:px-5">
           <span className="text-[15px] font-bold tracking-tight text-slate-900">
             자재 단가

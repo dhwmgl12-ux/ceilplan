@@ -28,7 +28,9 @@ import {
 } from "@/lib/calculations/base";
 import ProjectHeader from "@/components/layout/ProjectHeader";
 import InputPanel from "./InputPanel";
-import MaterialInputPanel from "./MaterialInputPanel";
+import MaterialInputPanel, {
+  type MaterialInputPanelHandle,
+} from "./MaterialInputPanel";
 import CeilingPreview from "./CeilingPreview";
 import ResultsPanel from "./ResultsPanel";
 import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
@@ -225,6 +227,7 @@ export default function CeilingWorkspace({
   }
 
   const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const materialPanelRef = useRef<MaterialInputPanelHandle>(null);
 
   useEffect(() => {
     // 다중 공간 화면의 이탈 확인은 부모가 담당합니다.
@@ -246,6 +249,12 @@ export default function CeilingWorkspace({
     if (errors.length === 0) return;
 
     const frame = requestAnimationFrame(() => {
+      // 단가 오류가 있으면 펼친 뒤 해당 입력으로 이동합니다.
+      if (materialPanelRef.current?.focusFirstPriceError()) {
+        return;
+      }
+
+      // 나머지 오류는 기존 오류 목록으로 이동합니다.
       const element = errorSummaryRef.current;
 
       element?.focus({ preventScroll: true });
@@ -889,8 +898,10 @@ export default function CeilingWorkspace({
             />
 
             <MaterialInputPanel
+              ref={materialPanelRef}
               inputs={materialInputs}
               onChange={handleMaterialChange}
+              showValidation={errors.length > 0}
             />
 
             <div className="cp-card">
