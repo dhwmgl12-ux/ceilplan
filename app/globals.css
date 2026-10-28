@@ -307,10 +307,13 @@ summary {
   display: none;
 }
 
-.cp-workspace[data-section="inputs"] > .cp-workspace-input,
-.cp-workspace[data-section="preview"] > .cp-workspace-preview,
-.cp-workspace[data-section="results"] > .cp-workspace-results {
-  display: block;
+/* 작은 화면에서만 선택한 작업 영역을 표시 */
+@media (width < 1280px) {
+  .cp-workspace[data-section="inputs"] > .cp-workspace-input,
+  .cp-workspace[data-section="preview"] > .cp-workspace-preview,
+  .cp-workspace[data-section="results"] > .cp-workspace-results {
+    display: block;
+  }
 }
 
 /* 데스크톱: 캔버스를 중심으로 필요한 패널만 표시 */
