@@ -36,6 +36,12 @@ interface PropertyDraft {
   values: PropertyValues;
 }
 
+interface PropertyFeedback {
+  featureId: string;
+  kind: "ERROR" | "SUCCESS";
+  text: string;
+}
+
 function toValues(feature: CeilingFeature): PropertyValues {
   return {
     type: feature.type,
@@ -65,10 +71,43 @@ export default function FeaturePropertiesPanel({
 }: FeaturePropertiesPanelProps) {
   // 요소마다 작성 중인 입력을 별도로 보관합니다.
   const [drafts, setDrafts] = useState(() => new Map<string, PropertyDraft>());
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [feedback, setFeedback] = useState<PropertyFeedback | null>(null);
 
   const feature = features.find((item) => item.id === activeFeatureId);
+
+  const currentFeedback =
+    feature && feedback?.featureId === feature.id ? feedback : null;
+
+  const error = currentFeedback?.kind === "ERROR" ? currentFeedback.text : "";
+
+  const notice =
+    currentFeedback?.kind === "SUCCESS" ? currentFeedback.text : "";
+
+  function setError(text: string) {
+    if (!text || !feature) {
+      setFeedback(null);
+      return;
+    }
+
+    setFeedback({
+      featureId: feature.id,
+      kind: "ERROR",
+      text,
+    });
+  }
+
+  function setNotice(text: string) {
+    if (!text || !feature) {
+      setFeedback(null);
+      return;
+    }
+
+    setFeedback({
+      featureId: feature.id,
+      kind: "SUCCESS",
+      text,
+    });
+  }
 
   const draft = feature ? drafts.get(feature.id) : undefined;
   const values = feature ? (draft?.values ?? toValues(feature)) : null;
@@ -320,13 +359,23 @@ export default function FeaturePropertiesPanel({
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
-          {error}
+        <p
+          key={`error-${feature.id}`}
+          role="alert"
+          className="mt-3 text-sm leading-6 text-red-700"
+        >
+          <span className="font-semibold">{featureNumber}번 요소:</span> {error}
         </p>
       )}
 
-      <p role="status" className="mt-2 text-xs text-blue-700">
-        {notice}
+      <p
+        key={`notice-${feature.id}`}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="mt-2 text-xs leading-5 text-blue-700"
+      >
+        {notice && `${featureNumber}번 요소: ${notice}`}
       </p>
 
       <div className="mt-5 border-t border-slate-100 pt-4">
