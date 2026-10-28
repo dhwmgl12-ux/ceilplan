@@ -427,6 +427,9 @@ export default function CeilingWorkspace({
     setDirty(source !== "storage");
     setHistoryMessage("");
     setSelectedFeatureId(null);
+
+    setResultPanelOpen(false);
+    moveToSection("inputs");
   }
 
   function handleNewProject() {
