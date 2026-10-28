@@ -21,6 +21,7 @@ import DraftRecovery from "./DraftRecovery";
 import { HOUSING_DRAFT_KEY } from "@/lib/draft-storage";
 import { normalizeHousingProject } from "@/lib/housing-io";
 import ToolSection from "@/components/ui/ToolSection";
+import PendingInputNotice from "@/components/ui/PendingInputNotice";
 
 function createSpace(name: string): CeilingSpace {
   return {
@@ -93,6 +94,8 @@ function UnitTypeEditor({
   const [name, setName] = useState(unitType.name);
   const [count, setCount] = useState(String(unitType.unitCount));
   const [error, setError] = useState("");
+  const hasPendingInput =
+    name !== unitType.name || count !== String(unitType.unitCount);
 
   function apply() {
     const value = Number(count);
@@ -113,6 +116,7 @@ function UnitTypeEditor({
 
   return (
     <div className="mt-4 rounded-lg bg-slate-50 p-3">
+      <PendingInputNotice visible={hasPendingInput} label="세대 타입 수정 폼" />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium">
           타입 이름

@@ -8,6 +8,7 @@ import {
 
 import type { SiteInput } from "@/types/ceilplan";
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
+import PendingInputNotice from "@/components/ui/PendingInputNotice";
 
 interface FeatureInputPanelProps {
   inputs: SiteInput;
@@ -43,6 +44,15 @@ export default function FeatureInputPanel({
   const [editingOriginal, setEditingOriginal] = useState<CeilingFeature | null>(
     null,
   );
+
+  const hasPendingInput = editingOriginal
+    ? type !== editingOriginal.type ||
+      draft.xMm !== String(editingOriginal.xMm) ||
+      draft.yMm !== String(editingOriginal.yMm) ||
+      draft.widthMm !== String(editingOriginal.widthMm) ||
+      draft.lengthMm !== String(editingOriginal.lengthMm)
+    : type !== "AIR_CONDITIONER" ||
+      Object.values(draft).some((value) => value !== "");
 
   function resetForm() {
     setEditingId(null);
@@ -159,6 +169,7 @@ export default function FeatureInputPanel({
       <h2 id="feature-input-title" className="cp-title">
         현장 요소
       </h2>
+      <PendingInputNotice visible={hasPendingInput} label="현장 요소 폼" />
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
         위치는 공간 왼쪽 상단 기준입니다. 요소 크기로 자재를 자동 공제하거나

@@ -10,6 +10,7 @@ import {
   type SiteInput,
 } from "@/types/ceilplan";
 import { isBoxInsideRoom, tryGetRoomGeometry } from "@/lib/geometry/room";
+import PendingInputNotice from "@/components/ui/PendingInputNotice";
 
 interface FeaturePropertiesPanelProps {
   inputs: SiteInput;
@@ -87,6 +88,12 @@ export default function FeaturePropertiesPanel({
   const linkedAdjustments = adjustments.filter(
     (item) => item.featureId === feature?.id,
   );
+
+  const pendingFeatureCount = Array.from(drafts.entries()).filter(
+    ([id, item]) =>
+      features.some((current) => current.id === id) &&
+      JSON.stringify(item.values) !== JSON.stringify(toValues(item.original)),
+  ).length;
 
   function changeField<K extends keyof PropertyValues>(
     field: K,
@@ -195,6 +202,10 @@ export default function FeaturePropertiesPanel({
         <h2 id="feature-properties-title" className="cp-title">
           요소 속성
         </h2>
+        <PendingInputNotice
+          visible={pendingFeatureCount > 0}
+          label={`요소 속성 ${pendingFeatureCount}개`}
+        />
 
         <p className="mt-2 text-xs leading-6 text-slate-500">
           도면이나 요소 목록에서 항목을 선택하면 위치·크기와 연결된 조정값을
@@ -228,6 +239,11 @@ export default function FeaturePropertiesPanel({
           선택 해제
         </button>
       </div>
+
+      <PendingInputNotice
+        visible={pendingFeatureCount > 0}
+        label={`요소 속성 ${pendingFeatureCount}개`}
+      />
 
       <label className="mt-4 block">
         <span className="mb-2 block text-xs font-medium text-slate-700">

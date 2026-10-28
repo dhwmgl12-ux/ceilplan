@@ -8,6 +8,7 @@ import {
   type CeilingFeature,
   type MaterialId,
 } from "@/types/ceilplan";
+import PendingInputNotice from "@/components/ui/PendingInputNotice";
 
 interface AdjustmentInputPanelProps {
   features: CeilingFeature[];
@@ -42,8 +43,24 @@ export default function AdjustmentInputPanel({
   const [error, setError] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginal, setEditingOriginal] = useState<Adjustment | null>(
+    null,
+  );
+
+  const hasPendingInput = editingOriginal
+    ? featureId !== editingOriginal.featureId ||
+      materialId !== editingOriginal.materialId ||
+      adjustmentType !== editingOriginal.adjustmentType ||
+      quantity !== String(editingOriginal.quantity) ||
+      memo !== editingOriginal.memo
+    : featureId !== "" ||
+      materialId !== "BOARD" ||
+      adjustmentType !== "ADD" ||
+      quantity !== "" ||
+      memo !== "";
 
   function resetForm() {
+    setEditingOriginal(null);
     setEditingId(null);
     setFeatureId("");
     setMaterialId("BOARD");
@@ -54,6 +71,7 @@ export default function AdjustmentInputPanel({
   }
 
   function startEditing(adjustment: Adjustment) {
+    setEditingOriginal({ ...adjustment });
     setEditingId(adjustment.id);
     setFeatureId(adjustment.featureId);
     setMaterialId(adjustment.materialId);
@@ -136,6 +154,8 @@ export default function AdjustmentInputPanel({
       <h2 id="adjustment-title" className="cp-title">
         현장 조정값
       </h2>
+
+      <PendingInputNotice visible={hasPendingInput} label="현장 조정값 폼" />
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
         현장 요소 때문에 발생하는 자재 증감을 직접 입력합니다. 자동 공제·보강
