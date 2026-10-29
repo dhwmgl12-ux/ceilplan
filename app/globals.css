@@ -740,6 +740,109 @@ summary {
   }
 }
 
+/* 작업 화면 탭 */
+.cp-task-navigation {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  padding: 8px 12px;
+
+  border-bottom: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+}
+
+.cp-task-tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+
+  border: 1px solid transparent;
+  border-radius: var(--cp-radius-md);
+  background: transparent;
+  color: var(--cp-text-secondary);
+
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.cp-task-tab:hover {
+  background: var(--cp-surface-muted);
+}
+
+.cp-task-tab[aria-pressed="true"] {
+  border-color: #bfdbfe;
+  background: var(--cp-primary-soft);
+  color: var(--cp-primary-hover);
+}
+
+/* 컴포넌트는 유지하고 표시만 전환 */
+.cp-task-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.cp-task-pane {
+  display: none;
+  min-width: 0;
+  min-height: 0;
+}
+
+.cp-task-workspace[data-tab="SETUP"] > .cp-task-setup,
+.cp-task-workspace[data-tab="REVIEW"] > .cp-task-review {
+  display: block;
+}
+
+/* 작은 화면의 요소 편집 영역 전환 */
+@media (width < 1280px) {
+  .cp-task-workspace[data-tab="EDIT"][data-edit-area="tools"] > .cp-task-tools,
+  .cp-task-workspace[data-tab="EDIT"][data-edit-area="canvas"]
+    > .cp-task-canvas,
+  .cp-task-workspace[data-tab="EDIT"][data-edit-area="properties"]
+    > .cp-task-properties {
+    display: block;
+  }
+}
+
+/* 데스크톱 작업 배치 */
+@media (min-width: 1280px) {
+  .cp-task-workspace {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cp-task-workspace[data-tab="SETUP"] {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+
+  .cp-task-workspace[data-tab="SETUP"] > .cp-task-canvas {
+    display: block;
+  }
+
+  .cp-task-workspace[data-tab="EDIT"] {
+    grid-template-columns: 280px minmax(0, 1fr) 320px;
+  }
+
+  .cp-task-workspace[data-tab="EDIT"] > .cp-task-tools,
+  .cp-task-workspace[data-tab="EDIT"] > .cp-task-canvas,
+  .cp-task-workspace[data-tab="EDIT"] > .cp-task-properties {
+    display: block;
+  }
+
+  .cp-task-workspace[data-tab="REVIEW"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1800px) {
+  .cp-task-workspace[data-tab="EDIT"] {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;

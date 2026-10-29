@@ -55,6 +55,8 @@ import FeaturePropertiesPanel from "./FeaturePropertiesPanel";
 
 import ToolSection from "@/components/ui/ToolSection";
 
+import WorkspaceTabs, { type WorkspaceTab } from "./WorkspaceTabs";
+
 export interface SpaceEditorHandle {
   readSpace: () => CeilingSpace | null;
 }
@@ -144,12 +146,11 @@ export default function CeilingWorkspace({
   const [projectManagerKey, setProjectManagerKey] = useState(0);
   const [historyMessage, setHistoryMessage] = useState("");
 
-  const [workspaceSection, setWorkspaceSection] = useState<
-    "inputs" | "preview" | "results"
-  >("inputs");
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("SETUP");
 
-  const [inputPanelOpen, setInputPanelOpen] = useState(true);
-  const [resultPanelOpen, setResultPanelOpen] = useState(false);
+  const [editArea, setEditArea] = useState<"tools" | "canvas" | "properties">(
+    "canvas",
+  );
   const editingSpaceId = initialSpace?.id;
 
   useImperativeHandle(ref, () => ({
@@ -211,7 +212,7 @@ export default function CeilingWorkspace({
   }
 
   function handleShowAdjustments() {
-    moveToSection("inputs");
+    openEditArea("properties");
 
     requestAnimationFrame(() => {
       const element = document.getElementById("adjustment-input-area");
@@ -292,7 +293,7 @@ export default function CeilingWorkspace({
 
   function handleReviewNavigate(target: ReviewTarget) {
     if (target === "FEATURES") {
-      moveToSection("inputs");
+      openEditArea("tools");
 
       if (featureDetailsRef.current) {
         featureDetailsRef.current.open = true;
@@ -346,8 +347,8 @@ export default function CeilingWorkspace({
     ];
 
     if (validationErrors.length > 0) {
-      setWorkspaceSection("inputs");
-      setInputPanelOpen(true);
+      setActiveTab("SETUP");
+
       setErrors(validationErrors);
 
       if (snapshot) {
@@ -394,8 +395,7 @@ export default function CeilingWorkspace({
 
       moveAfterCalculation("results");
     } catch (error) {
-      setWorkspaceSection("inputs");
-      setInputPanelOpen(true);
+      setActiveTab("SETUP");
 
       setErrors([
         error instanceof Error ? error.message : "계산 중 오류가 발생했습니다.",
@@ -436,7 +436,6 @@ export default function CeilingWorkspace({
     setHistoryMessage("");
     setSelectedFeatureId(null);
 
-    setResultPanelOpen(false);
     moveToSection("inputs");
   }
 
@@ -623,14 +622,12 @@ export default function CeilingWorkspace({
   }
 
   function moveToSection(id: "inputs" | "preview" | "results") {
-    setWorkspaceSection(id);
+    setActiveTab(
+      id === "inputs" ? "SETUP" : id === "preview" ? "EDIT" : "REVIEW",
+    );
 
-    if (id === "inputs") {
-      setInputPanelOpen(true);
-    }
-
-    if (id === "results") {
-      setResultPanelOpen(true);
+    if (id === "preview") {
+      setEditArea("canvas");
     }
 
     requestAnimationFrame(() => {
@@ -645,6 +642,11 @@ export default function CeilingWorkspace({
 
       element?.focus({ preventScroll: true });
     });
+  }
+
+  function openEditArea(area: "tools" | "canvas" | "properties") {
+    setActiveTab("EDIT");
+    setEditArea(area);
   }
 
   function moveAfterCalculation(id: "inputs" | "results") {
@@ -703,131 +705,37 @@ export default function CeilingWorkspace({
         )}
       </div>
 
-      <nav aria-label="작업 화면 구성" className="cp-workspace-toolbar">
-        {/* 작은 화면에서는 작업 영역 전환 */}
-        <div className="grid w-full grid-cols-3 gap-1 min-[1280px]:hidden">
-          {(
-            [
-              ["inputs", "입력"],
-              ["preview", "캔버스"],
-              ["results", "결과"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => moveToSection(id)}
-              aria-pressed={workspaceSection === id}
-              aria-controls={id === "results" ? "workspace-results" : id}
-              className={
-                workspaceSection === id
-                  ? "cp-button-primary"
-                  : "cp-button-secondary"
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* 넓은 화면에서는 양옆 패널 접기·펼치기 */}
-        <div className="hidden items-center gap-2 min-[1280px]:flex">
-          <button
-            type="button"
-            onClick={() => setInputPanelOpen((previous) => !previous)}
-            aria-expanded={inputPanelOpen}
-            aria-controls="inputs"
-            className="cp-button-secondary"
-          >
-            {inputPanelOpen ? "입력 패널 접기" : "입력 패널 열기"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setInputPanelOpen(false);
-              setResultPanelOpen(false);
-              moveToSection("preview");
-            }}
-            aria-pressed={!inputPanelOpen && !resultPanelOpen}
-            className="cp-button-secondary"
-          >
-            캔버스 집중
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setResultPanelOpen((previous) => !previous)}
-            aria-expanded={resultPanelOpen}
-            aria-controls="workspace-results"
-            className="cp-button-secondary"
-          >
-            {resultPanelOpen ? "결과 패널 접기" : "결과 패널 열기"}
-          </button>
-        </div>
-
-        <p className="hidden text-xs text-slate-500 min-[1280px]:block">
-          {stale
-            ? "입력 변경 · 재계산 필요"
-            : snapshot
-              ? "계산 결과 있음"
-              : "공간 치수를 입력해 시작하세요"}
-        </p>
-      </nav>
+      <WorkspaceTabs activeTab={activeTab} onChange={setActiveTab} />
 
       <main id="main-content" tabIndex={-1} className="cp-shell-main">
         <div className="cp-shell-notices">
           {!isSpaceEditor && (
-            <div className="mb-3">
-              <UsageGuide
-                showWelcome={showWelcome}
-                onStart={() => moveToSection("inputs")}
-                onLoadExample={() => {
-                  projectManagerRef.current?.loadExample();
-                  moveToSection("inputs");
-                }}
-                onOpenProjects={() => handleNavigate("projects")}
+            <>
+              <div className="mb-3">
+                <UsageGuide
+                  showWelcome={showWelcome}
+                  onStart={() => moveToSection("inputs")}
+                  onLoadExample={() => {
+                    projectManagerRef.current?.loadExample();
+                    moveToSection("inputs");
+                  }}
+                  onOpenProjects={() => handleNavigate("projects")}
+                />
+              </div>
+
+              <DraftRecovery
+                storageKey={SINGLE_DRAFT_KEY}
+                dirty={dirty}
+                readData={readSingleDraft}
+                normalize={normalizeProjectData}
+                onRecover={recoverSingleDraft}
               />
-            </div>
+            </>
           )}
         </div>
 
-        <details className="mb-3 rounded-lg border border-[var(--cp-border)] bg-white">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
-            작업 확인
-            <span className="ml-2 text-xs text-slate-500">
-              오류 {reviewItems.filter((item) => item.level === "ERROR").length}
-              개 · 확인 필요{" "}
-              {reviewItems.filter((item) => item.level === "CHECK").length}개
-            </span>
-          </summary>
-
-          <div className="border-t border-[var(--cp-border)] p-3">
-            <ReviewPanel
-              items={reviewItems}
-              onNavigate={handleReviewNavigate}
-            />
-          </div>
-        </details>
-
-        {!isSpaceEditor && (
-          <div className="mb-4">
-            <DraftRecovery
-              storageKey={SINGLE_DRAFT_KEY}
-              dirty={dirty}
-              readData={readSingleDraft}
-              normalize={normalizeProjectData}
-              onRecover={recoverSingleDraft}
-            />
-          </div>
-        )}
-
         <div className="cp-shell-history">
-          <div
-            role="group"
-            aria-label="편집 이력"
-            className="flex flex-wrap gap-2"
-          >
+          <div role="group" aria-label="편집 이력" className="flex gap-2">
             <button
               type="button"
               onClick={handleUndo}
@@ -847,27 +755,52 @@ export default function CeilingWorkspace({
             </button>
           </div>
 
-          <p
-            role="status"
-            className="min-w-0 text-[11px] leading-5 text-slate-500"
-          >
+          <p role="status" className="text-[11px] leading-5 text-slate-500">
             {historyMessage ||
-              "적용된 입력을 되돌립니다. 취소·다시 실행 시 미적용 폼은 초기화됩니다."}
+              "작업 화면을 전환해도 같은 공간의 입력과 선택은 유지됩니다."}
           </p>
+
+          <div
+            role="group"
+            aria-label="요소 편집 영역 선택"
+            className={
+              activeTab === "EDIT"
+                ? "flex flex-wrap gap-1 min-[1280px]:hidden"
+                : "hidden"
+            }
+          >
+            {(
+              [
+                ["tools", "도구"],
+                ["canvas", "캔버스"],
+                ["properties", "속성"],
+              ] as const
+            ).map(([area, label]) => (
+              <button
+                key={area}
+                type="button"
+                onClick={() => setEditArea(area)}
+                aria-pressed={editArea === area}
+                className="cp-button-secondary"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
-          className="cp-workspace cp-shell-workspace"
-          data-section={workspaceSection}
-          data-input-open={inputPanelOpen}
-          data-result-open={resultPanelOpen}
+          id="workspace-content"
+          className="cp-task-workspace cp-shell-workspace"
+          data-tab={activeTab}
+          data-edit-area={editArea}
         >
           <div
             id="inputs"
             role="region"
-            aria-label="공간과 자재 입력"
+            aria-label="공간과 자재 설정"
             tabIndex={0}
-            className="cp-workspace-input cp-shell-pane space-y-4"
+            className="cp-task-pane cp-task-setup cp-shell-pane space-y-4"
           >
             <InputPanel
               inputs={inputs}
@@ -890,7 +823,7 @@ export default function CeilingWorkspace({
                   role="alert"
                   tabIndex={-1}
                   aria-labelledby="calculation-errors-title"
-                  className="mb-4 rounded-lg bg-red-50 p-3"
+                  className="mb-4 rounded-md bg-red-50 p-3"
                 >
                   <p
                     id="calculation-errors-title"
@@ -910,32 +843,27 @@ export default function CeilingWorkspace({
               <button
                 type="button"
                 onClick={handleCalculate}
-                aria-describedby={
-                  errors.length > 0 ? "calculation-errors" : undefined
-                }
                 className="cp-button-primary w-full"
               >
                 예상 자재 계산하기
               </button>
-
-              <p role="status" className="mt-3 text-xs text-slate-500">
-                {stale
-                  ? "입력값이 변경되어 재계산이 필요합니다."
-                  : result
-                    ? "계산이 완료되었습니다."
-                    : "입력 후 계산 버튼을 눌러주세요."}
-              </p>
             </div>
+          </div>
+
+          <div
+            id="workspace-tools"
+            role="region"
+            aria-label="현장 요소와 보조 도구"
+            tabIndex={0}
+            className="cp-task-pane cp-task-tools cp-shell-pane space-y-4"
+          >
             <details
               ref={featureDetailsRef}
               key={featureFormKey}
-              className="group rounded-xl border border-slate-200 bg-white"
+              className="rounded-lg border border-slate-200 bg-white"
             >
-              <summary className="cursor-pointer rounded-xl px-5 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-                <span className="ml-1 text-sm font-semibold">
-                  현장 요소 입력
-                </span>
-
+              <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
+                현장 요소 입력·목록
                 <span className="ml-2 text-xs text-slate-500">
                   {features.length}개
                 </span>
@@ -961,6 +889,44 @@ export default function CeilingWorkspace({
               activeFeatureId={activeFeatureId}
               onAddMany={handleAddManyFeatures}
             />
+          </div>
+
+          <div
+            id="preview"
+            role="region"
+            aria-label="설계 캔버스"
+            tabIndex={0}
+            className="cp-task-pane cp-task-canvas cp-shell-pane"
+          >
+            <CeilingPreview
+              key={featureFormKey}
+              inputs={inputs}
+              features={features}
+              activeFeatureId={activeFeatureId}
+              onSelectFeature={handleSelectFeature}
+              onAdd={handleAddFeature}
+              onUpdate={handleUpdateFeature}
+            />
+          </div>
+
+          <div
+            id="workspace-properties"
+            role="region"
+            aria-label="선택 요소 속성과 조정값"
+            tabIndex={0}
+            className="cp-task-pane cp-task-properties cp-shell-pane space-y-4"
+          >
+            <FeaturePropertiesPanel
+              key={`properties-${featureFormKey}`}
+              inputs={inputs}
+              features={features}
+              adjustments={adjustments}
+              activeFeatureId={activeFeatureId}
+              onUpdate={handleUpdateFeature}
+              onClearSelection={() => handleSelectFeature(null)}
+              onShowInList={handleShowSelectedInList}
+              onShowAdjustments={handleShowAdjustments}
+            />
 
             <div id="adjustment-input-area" tabIndex={-1}>
               <AdjustmentInputPanel
@@ -977,47 +943,28 @@ export default function CeilingWorkspace({
           </div>
 
           <div
-            id="preview"
-            role="region"
-            aria-label="설계 캔버스와 요소 속성"
-            tabIndex={0}
-            className="cp-workspace-preview cp-shell-pane space-y-3"
-          >
-            <CeilingPreview
-              key={featureFormKey}
-              inputs={inputs}
-              features={features}
-              activeFeatureId={activeFeatureId}
-              onSelectFeature={handleSelectFeature}
-              onAdd={handleAddFeature}
-              onUpdate={handleUpdateFeature}
-            />
-
-            <FeaturePropertiesPanel
-              key={`properties-${featureFormKey}`}
-              inputs={inputs}
-              features={features}
-              adjustments={adjustments}
-              activeFeatureId={activeFeatureId}
-              onUpdate={handleUpdateFeature}
-              onClearSelection={() => handleSelectFeature(null)}
-              onShowInList={handleShowSelectedInList}
-              onShowAdjustments={handleShowAdjustments}
-            />
-          </div>
-
-          <div
             id="workspace-results"
             role="region"
-            aria-label="산출 결과와 계산안"
+            aria-label="산출 결과와 검토"
             tabIndex={0}
-            className="cp-workspace-results cp-shell-pane space-y-4"
+            className="cp-task-pane cp-task-review cp-shell-pane space-y-4"
           >
             <ResultsPanel snapshot={snapshot} stale={stale} />
 
             <ToolSection
+              title="검토할 항목"
+              description="현재 입력과 결과 상태를 확인합니다."
+              status={`${reviewItems.length}개 항목`}
+            >
+              <ReviewPanel
+                items={reviewItems}
+                onNavigate={handleReviewNavigate}
+              />
+            </ToolSection>
+
+            <ToolSection
               title="계산안 저장·비교"
-              description="현재 결과를 보관하고 변경 전후 수량·금액을 비교합니다."
+              description="계산 당시 결과를 보관하고 비교합니다."
               status={
                 !snapshot
                   ? "계산 후 저장 가능"
@@ -1035,45 +982,44 @@ export default function CeilingWorkspace({
           </div>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[1280px]:hidden">
-        <footer className="cp-shell-status" aria-label="작업 상태">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="text-xs font-medium text-slate-700">
-              {isSpaceEditor ? "선택 공간 편집" : "단일 공간 작업"}
-            </span>
 
-            <span className="text-[11px] text-slate-500">단위 mm</span>
+      <footer className="cp-shell-status" aria-label="작업 상태">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="text-xs font-medium text-slate-700">
+            {isSpaceEditor ? "선택 공간 편집" : "단일 공간 작업"}
+          </span>
 
-            <span
-              className={`text-[11px] ${
-                stale ? "text-amber-800" : "text-slate-600"
-              }`}
-            >
-              {!snapshot
-                ? "계산 결과 없음"
-                : stale
-                  ? "재계산 필요"
-                  : "적용된 입력 기준 최신"}
-            </span>
+          <span className="text-[11px] text-slate-500">단위 mm</span>
 
-            {!isSpaceEditor && (
-              <span className="text-[11px] text-slate-500">
-                {dirty
-                  ? "프로젝트 미저장 변경사항 있음"
-                  : "프로젝트 미저장 변경사항 없음"}
-              </span>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCalculate}
-            className="cp-button-primary shrink-0"
+          <span
+            className={`text-[11px] ${
+              stale ? "text-amber-800" : "text-slate-600"
+            }`}
           >
-            {stale ? "다시 계산" : "산출 계산"}
-          </button>
-        </footer>
-      </div>
+            {!snapshot
+              ? "계산 결과 없음"
+              : stale
+                ? "재계산 필요"
+                : "적용된 입력 기준 최신"}
+          </span>
+
+          {!isSpaceEditor && (
+            <span className="text-[11px] text-slate-500">
+              {dirty
+                ? "프로젝트 미저장 변경사항 있음"
+                : "프로젝트 미저장 변경사항 없음"}
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCalculate}
+          className="cp-button-primary shrink-0"
+        >
+          {stale ? "다시 계산" : "산출 계산"}
+        </button>
+      </footer>
     </div>
   );
 }
