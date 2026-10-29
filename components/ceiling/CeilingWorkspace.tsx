@@ -675,7 +675,7 @@ export default function CeilingWorkspace({
     adjustments.length === 0;
 
   return (
-    <div className="min-w-0">
+    <div className="cp-shell" data-embedded={isSpaceEditor}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-blue-700 focus:shadow-lg"
@@ -683,47 +683,49 @@ export default function CeilingWorkspace({
         본문으로 바로가기
       </a>
 
-      {isSpaceEditor ? (
-        <header className="border-b border-blue-100 bg-white px-4 py-4 sm:px-6">
-          <h2 className="text-xl font-bold">
-            공간 편집: {inputs.name.trim() || "이름 없는 공간"}
-          </h2>
+      <div className="cp-shell-header">
+        {isSpaceEditor ? (
+          <header className="border-b border-blue-100 bg-white px-4 py-4 sm:px-6">
+            <h2 className="text-xl font-bold">
+              공간 편집: {inputs.name.trim() || "이름 없는 공간"}
+            </h2>
 
-          <p className="mt-2 text-sm text-slate-500">
-            이 영역의 결과는 선택한 공간 한 개·한 세대 기준입니다.
-          </p>
-        </header>
-      ) : (
-        <>
-          <Sidebar
-            activeMenu={activeMenu}
-            onNavigate={handleNavigate}
-            hasUnsavedChanges={dirty}
-          />
+            <p className="mt-2 text-sm text-slate-500">
+              이 영역의 결과는 선택한 공간 한 개·한 세대 기준입니다.
+            </p>
+          </header>
+        ) : (
+          <>
+            <Sidebar
+              activeMenu={activeMenu}
+              onNavigate={handleNavigate}
+              hasUnsavedChanges={dirty}
+            />
 
-          <ProjectHeader
-            projectName={inputs.name}
-            areaM2={areaM2}
-            dirty={dirty}
-          >
-            <div id="project-save-area" tabIndex={-1}>
-              <ProjectManager
-                key={projectManagerKey}
-                ref={projectManagerRef}
-                siteInput={inputs}
-                materialInput={materialInputs}
-                features={features}
-                adjustments={adjustments}
-                snapshot={snapshot}
-                dirty={dirty}
-                onLoad={handleLoadProject}
-                onNew={handleNewProject}
-                onSaved={() => setDirty(false)}
-              />
-            </div>
-          </ProjectHeader>
-        </>
-      )}
+            <ProjectHeader
+              projectName={inputs.name}
+              areaM2={areaM2}
+              dirty={dirty}
+            >
+              <div id="project-save-area" tabIndex={-1}>
+                <ProjectManager
+                  key={projectManagerKey}
+                  ref={projectManagerRef}
+                  siteInput={inputs}
+                  materialInput={materialInputs}
+                  features={features}
+                  adjustments={adjustments}
+                  snapshot={snapshot}
+                  dirty={dirty}
+                  onLoad={handleLoadProject}
+                  onNew={handleNewProject}
+                  onSaved={() => setDirty(false)}
+                />
+              </div>
+            </ProjectHeader>
+          </>
+        )}
+      </div>
 
       <nav aria-label="작업 화면 구성" className="cp-workspace-toolbar">
         {/* 작은 화면에서는 작업 영역 전환 */}
@@ -797,24 +799,23 @@ export default function CeilingWorkspace({
         </p>
       </nav>
 
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="p-3 pb-28 sm:p-4 sm:pb-28 min-[1280px]:pb-4"
-      >
-        {!isSpaceEditor && (
-          <div className="mb-3">
-            <UsageGuide
-              showWelcome={showWelcome}
-              onStart={() => moveToSection("inputs")}
-              onLoadExample={() => {
-                projectManagerRef.current?.loadExample();
-                moveToSection("inputs");
-              }}
-              onOpenProjects={() => handleNavigate("projects")}
-            />
-          </div>
-        )}
+      <main id="main-content" tabIndex={-1} className="cp-shell-main">
+        <div className="cp-shell-notices">
+          {!isSpaceEditor && (
+            <div className="mb-3">
+              <UsageGuide
+                showWelcome={showWelcome}
+                onStart={() => moveToSection("inputs")}
+                onLoadExample={() => {
+                  projectManagerRef.current?.loadExample();
+                  moveToSection("inputs");
+                }}
+                onOpenProjects={() => handleNavigate("projects")}
+              />
+            </div>
+          )}
+        </div>
+
         <details className="mb-3 rounded-lg border border-[var(--cp-border)] bg-white">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
             작업 확인
@@ -845,7 +846,7 @@ export default function CeilingWorkspace({
           </div>
         )}
 
-        <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="cp-shell-history">
           <div
             role="group"
             aria-label="편집 이력"
@@ -870,26 +871,27 @@ export default function CeilingWorkspace({
             </button>
           </div>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            적용된 입력과 요소 변경을 되돌립니다. 수정 중인 임시 입력은
-            초기화되며, 계산 결과는 다시 계산해야 합니다.
-          </p>
-
-          <p role="status" className="mt-1 text-xs text-blue-700">
-            {historyMessage}
+          <p
+            role="status"
+            className="min-w-0 text-[11px] leading-5 text-slate-500"
+          >
+            {historyMessage ||
+              "적용된 입력을 되돌립니다. 취소·다시 실행 시 미적용 폼은 초기화됩니다."}
           </p>
         </div>
 
         <div
-          className="cp-workspace"
+          className="cp-workspace cp-shell-workspace"
           data-section={workspaceSection}
           data-input-open={inputPanelOpen}
           data-result-open={resultPanelOpen}
         >
           <div
             id="inputs"
-            tabIndex={-1}
-            className="cp-workspace-input space-y-4"
+            role="region"
+            aria-label="공간과 자재 입력"
+            tabIndex={0}
+            className="cp-workspace-input cp-shell-pane space-y-4"
           >
             <InputPanel
               inputs={inputs}
@@ -1000,8 +1002,10 @@ export default function CeilingWorkspace({
 
           <div
             id="preview"
-            tabIndex={-1}
-            className="cp-workspace-preview space-y-3"
+            role="region"
+            aria-label="설계 캔버스와 요소 속성"
+            tabIndex={0}
+            className="cp-workspace-preview cp-shell-pane space-y-3"
           >
             <CeilingPreview
               key={featureFormKey}
@@ -1028,8 +1032,10 @@ export default function CeilingWorkspace({
 
           <div
             id="workspace-results"
-            tabIndex={-1}
-            className="cp-workspace-results space-y-4"
+            role="region"
+            aria-label="산출 결과와 계산안"
+            tabIndex={0}
+            className="cp-workspace-results cp-shell-pane space-y-4"
           >
             <ResultsPanel snapshot={snapshot} stale={stale} />
 
@@ -1054,23 +1060,43 @@ export default function CeilingWorkspace({
         </div>
       </main>
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[1280px]:hidden">
-        <div className="flex items-center gap-3">
-          <p className="min-w-0 flex-1 text-xs leading-5 text-slate-500">
-            {stale
-              ? "입력이 변경되어 재계산이 필요합니다."
-              : result
-                ? "계산 결과를 확인하세요."
-                : "조건을 입력하고 계산하세요."}
-          </p>
+        <footer className="cp-shell-status" aria-label="작업 상태">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="text-xs font-medium text-slate-700">
+              {isSpaceEditor ? "선택 공간 편집" : "단일 공간 작업"}
+            </span>
+
+            <span className="text-[11px] text-slate-500">단위 mm</span>
+
+            <span
+              className={`text-[11px] ${
+                stale ? "text-amber-800" : "text-slate-600"
+              }`}
+            >
+              {!snapshot
+                ? "계산 결과 없음"
+                : stale
+                  ? "재계산 필요"
+                  : "적용된 입력 기준 최신"}
+            </span>
+
+            {!isSpaceEditor && (
+              <span className="text-[11px] text-slate-500">
+                {dirty
+                  ? "프로젝트 미저장 변경사항 있음"
+                  : "프로젝트 미저장 변경사항 없음"}
+              </span>
+            )}
+          </div>
 
           <button
             type="button"
             onClick={handleCalculate}
             className="cp-button-primary shrink-0"
           >
-            {stale ? "다시 계산" : "계산하기"}
+            {stale ? "다시 계산" : "산출 계산"}
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

@@ -534,6 +534,154 @@ summary {
   }
 }
 
+/* 작업 화면 골격 */
+.cp-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 100dvh;
+  background: var(--cp-bg);
+}
+
+.cp-shell-header {
+  min-width: 0;
+}
+
+.cp-shell-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: start;
+  gap: 10px;
+
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+}
+
+.cp-shell-notices {
+  min-width: 0;
+}
+
+.cp-shell-notices > :last-child {
+  margin-bottom: 0;
+}
+
+.cp-shell-history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+
+  min-width: 0;
+  padding: 8px 12px;
+
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  background: var(--cp-surface);
+}
+
+.cp-shell-workspace {
+  min-width: 0;
+  min-height: 0;
+}
+
+.cp-shell-pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.cp-shell-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+
+  min-width: 0;
+  padding: 8px 16px;
+
+  border-top: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+}
+
+/* 데스크톱에서는 작업 화면을 창 높이 안에 배치 */
+@media (min-width: 1280px) {
+  .cp-shell {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /*
+ * 다중 공간 관리 화면은 기존처럼 페이지 스크롤을 사용합니다.
+ * 내부의 선택 공간 편집기에만 높이를 지정합니다.
+ */
+  .cp-shell[data-embedded="true"] {
+    height: min(900px, 100dvh);
+  }
+
+  .cp-shell-header {
+    max-height: 32dvh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .cp-shell > .cp-workspace-toolbar {
+    position: static;
+  }
+
+  .cp-shell-main {
+    overflow: hidden;
+  }
+
+  .cp-shell-notices {
+    max-height: min(20dvh, 160px);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .cp-shell-workspace {
+    height: 100%;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .cp-shell-workspace > .cp-shell-pane {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 4px;
+    scroll-margin-top: 12px;
+  }
+
+  .cp-shell-workspace > .cp-workspace-preview {
+    position: static;
+  }
+}
+
+/* 작은 화면에서는 페이지 스크롤과 기존 패널 전환을 사용 */
+@media (width < 1280px) {
+  .cp-shell,
+  .cp-shell[data-embedded="true"] {
+    height: auto;
+  }
+
+  .cp-shell-main {
+    display: block;
+  }
+
+  .cp-shell-notices,
+  .cp-shell-history {
+    margin-bottom: 12px;
+  }
+
+  .cp-shell-status {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;
