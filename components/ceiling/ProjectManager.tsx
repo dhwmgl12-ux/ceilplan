@@ -21,6 +21,9 @@ import { exportProjectJson, importProjectJson } from "@/lib/project-io";
 import { downloadText } from "@/lib/download";
 
 import { createExampleProject } from "@/lib/example-project";
+import Link from "next/link";
+import ProjectHeader from "@/components/layout/ProjectHeader";
+import WorkspaceDialog from "@/components/ui/WorkspaceDialog";
 
 export interface ProjectManagerHandle {
   openList: () => void;
@@ -35,6 +38,10 @@ interface ProjectManagerProps {
   onLoad: (project: Project, source: "storage" | "import" | "example") => void;
   onNew: () => void;
   onSaved: () => void;
+  areaM2: number | null;
+  stale: boolean;
+  onCalculate: () => void;
+  onShowResults: () => void;
   features: CeilingFeature[];
   ref?: Ref<ProjectManagerHandle>;
   snapshot: CalculationSnapshot | null;
@@ -51,12 +58,17 @@ export default function ProjectManager({
   onLoad,
   onNew,
   onSaved,
+  areaM2,
+  stale,
+  onCalculate,
+  onShowResults,
 }: ProjectManagerProps) {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [listOpen, setListOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
 
   const [message, setMessage] = useState("");
@@ -292,242 +304,274 @@ export default function ProjectManager({
   );
 
   return (
-    <section
-      id="projects"
-      aria-labelledby="project-manager-title"
-      className="border-t border-[var(--cp-border)] px-4 py-3 sm:px-6"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 id="project-manager-title" className="sr-only">
-            프로젝트 관리
-          </h2>
+    <>
+      <ProjectHeader
+        projectName={siteInput.name}
+        areaM2={areaM2}
+        dirty={dirty}
+        savedAt={savedAt}
+      >
+        <button
+          type="button"
+          onClick={handleOpenList}
+          disabled={importing}
+          className="cp-button-secondary"
+        >
+          열기
+        </button>
 
-          <p className="text-xs leading-5 text-slate-500">
-            {savedAt
-              ? `마지막 저장: ${new Date(savedAt).toLocaleString("ko-KR", {
-                  timeZone: "Asia/Seoul",
-                })}`
-              : "아직 저장하지 않았습니다."}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={importing}
+          className="cp-button-secondary"
+        >
+          저장
+        </button>
 
-            {dirty && (
-              <span className="ml-2 font-medium text-amber-700">
-                · 저장하지 않은 변경사항
-              </span>
-            )}
-          </p>
+        <button
+          type="button"
+          onClick={onCalculate}
+          disabled={importing}
+          className={
+            stale || !snapshot ? "cp-button-primary" : "cp-button-secondary"
+          }
+        >
+          {stale ? "다시 계산" : "산출 계산"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onShowResults}
+          disabled={!snapshot || importing}
+          className={
+            snapshot && !stale ? "cp-button-primary" : "cp-button-secondary"
+          }
+        >
+          {stale ? "이전 결과 보기" : "결과 보기"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          disabled={importing}
+          aria-label="프로젝트 추가 작업"
+          className="cp-button-secondary"
+        >
+          추가 작업
+        </button>
+      </ProjectHeader>
+
+      {(message || error || importing) && (
+        <div className="border-b border-slate-200 bg-white px-4 py-2">
+          {importing && (
+            <p role="status" className="text-xs text-slate-600">
+              JSON 파일을 확인하고 있습니다.
+            </p>
+          )}
+
+          {message && (
+            <p role="status" className="text-xs leading-5 text-slate-600">
+              {message}
+            </p>
+          )}
+
+          {error && (
+            <p role="alert" className="text-xs leading-5 text-red-700">
+              {error}
+            </p>
+          )}
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        onChange={handleImportJson}
+        className="hidden"
+        aria-label="프로젝트 JSON 파일 선택"
+      />
+
+      <WorkspaceDialog
+        open={listOpen}
+        title="프로젝트 열기"
+        onClose={() => setListOpen(false)}
+      >
+        <p className="text-xs leading-5 text-slate-500">
+          이 브라우저에 저장한 프로젝트 {projects.length}개입니다. 다른 기기의
+          데이터는 자동으로 표시되지 않습니다.
+        </p>
+
+        {projects.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-700">
+              저장한 프로젝트가 없습니다
+            </p>
+
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              예시로 시작하거나 추가 작업에서 JSON을 가져오세요.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleLoadExample}
+              disabled={importing}
+              className="cp-button-secondary mt-3"
+            >
+              예시로 시작하기
+            </button>
+          </div>
+        ) : (
+          <>
+            <label className="mt-4 block">
+              <span className="sr-only">프로젝트 이름 검색</span>
+
+              <input
+                type="search"
+                value={projectSearch}
+                onChange={(event) => setProjectSearch(event.target.value)}
+                placeholder="프로젝트 이름 검색"
+                className="cp-input"
+              />
+            </label>
+
+            {filteredProjects.length === 0 ? (
+              <p role="status" className="mt-4 text-xs text-slate-500">
+                검색 결과가 없습니다.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {filteredProjects.map((project) => (
+                  <li key={project.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleLoad(project)}
+                      disabled={importing}
+                      className={`w-full rounded-md border p-3 text-left ${
+                        project.id === projectId
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="block break-words text-sm font-semibold text-slate-800">
+                        {project.siteInput.name || "이름 없는 프로젝트"}
+                        {project.id === projectId && (
+                          <span className="ml-2 text-[11px] font-medium text-blue-700">
+                            현재 프로젝트
+                          </span>
+                        )}
+                      </span>
+
+                      <span className="mt-2 block text-xs text-slate-500">
+                        {project.siteInput.shape === "L"
+                          ? "ㄱ자"
+                          : project.siteInput.shape === "U"
+                            ? "ㄷ자"
+                            : "직사각형"}
+                        {" · "}
+                        {project.siteInput.widthMm || "미입력"} ×{" "}
+                        {project.siteInput.lengthMm || "미입력"} mm
+                      </span>
+
+                      <span className="mt-1 block text-[11px] text-slate-500">
+                        수정일{" "}
+                        {new Date(project.updatedAt).toLocaleString("ko-KR", {
+                          timeZone: "Asia/Seoul",
+                        })}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </WorkspaceDialog>
+
+      <WorkspaceDialog
+        open={moreOpen}
+        title="프로젝트 추가 작업"
+        onClose={() => setMoreOpen(false)}
+      >
+        <div className="grid gap-2">
           <button
             type="button"
-            onClick={handleNew}
-            disabled={importing}
-            className="cp-button-secondary"
+            onClick={() => {
+              setMoreOpen(false);
+              handleNew();
+            }}
+            className="cp-button-secondary justify-start"
           >
             새 프로젝트
           </button>
 
           <button
             type="button"
-            onClick={handleOpenList}
-            disabled={importing}
-            aria-expanded={listOpen}
-            aria-controls="project-list"
-            className="cp-button-secondary"
+            onClick={() => {
+              setMoreOpen(false);
+              handleLoadExample();
+            }}
+            className="cp-button-secondary justify-start"
           >
-            목록 열기
+            예시 프로젝트 불러오기
           </button>
 
           <button
             type="button"
-            onClick={handleSave}
-            disabled={importing}
-            className="cp-button-primary"
+            onClick={() => {
+              setMoreOpen(false);
+              handleExportJson();
+            }}
+            className="cp-button-secondary justify-start"
           >
-            프로젝트 저장
+            JSON 내보내기
           </button>
 
-          <details className="rounded-md border border-slate-200 bg-white">
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-              추가 작업
-              <span aria-hidden="true">⌄</span>
-            </summary>
+          <button
+            type="button"
+            onClick={() => {
+              fileInputRef.current?.click();
+              setMoreOpen(false);
+            }}
+            className="cp-button-secondary justify-start"
+          >
+            JSON 가져오기
+          </button>
 
-            <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3">
-              <button
-                type="button"
-                onClick={handleLoadExample}
-                disabled={importing}
-                className="cp-button-secondary"
-              >
-                예시 프로젝트 불러오기
-              </button>
+          <Link
+            href="/housing"
+            onClick={(event) => {
+              if (
+                event.ctrlKey ||
+                event.metaKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
 
-              <button
-                type="button"
-                onClick={handleExportJson}
-                disabled={importing}
-                className="cp-button-secondary"
-              >
-                JSON 내보내기
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={importing}
-                className="cp-button-secondary"
-              >
-                {importing ? "가져오는 중…" : "JSON 가져오기"}
-              </button>
-            </div>
-          </details>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,application/json"
-            onChange={handleImportJson}
-            className="hidden"
-            aria-label="프로젝트 JSON 파일 선택"
-          />
+              if (
+                dirty &&
+                !window.confirm(
+                  "저장하지 않은 변경사항이 있습니다. 다중 공간 화면으로 이동할까요?",
+                )
+              ) {
+                event.preventDefault();
+              }
+            }}
+            className="cp-button-secondary justify-start"
+          >
+            세대 타입·다중 공간 관리
+          </Link>
         </div>
-      </div>
 
-      {message && (
-        <p role="status" className="mt-3 text-sm text-blue-700">
-          {message}
+        <p className="mt-4 rounded-md bg-slate-50 p-3 text-xs leading-6 text-slate-500">
+          프로젝트는 현재 브라우저에 저장됩니다. 다른 기기와 동기화되지 않으며,
+          브라우저 데이터를 삭제하면 사라질 수 있습니다. 필요한 자료는 JSON으로
+          백업하세요. 미적용 폼 입력은 저장 대상이 아닙니다.
         </p>
-      )}
-
-      {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      <details className="mt-2 text-xs text-slate-500">
-        <summary className="cursor-pointer">브라우저 저장 안내</summary>
-
-        <p className="mt-2 leading-5">
-          이 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저
-          데이터를 삭제하면 저장 내용도 사라집니다.
-        </p>
-      </details>
-
-      <div id="project-list" hidden={!listOpen}>
-        <div className="mt-4 border-t border-slate-200 pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">
-                저장한 프로젝트
-              </h3>
-
-              <p className="mt-1 text-[11px] text-slate-500">
-                현재 브라우저 · {projects.length}개
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setListOpen(false)}
-              className="cp-button-secondary"
-            >
-              닫기
-            </button>
-          </div>
-
-          {projects.length === 0 ? (
-            <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-700">
-                저장한 프로젝트가 없습니다
-              </p>
-
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                현재 작업을 저장하거나 예시 프로젝트로 시작하세요. 기존 JSON
-                파일은 추가 작업에서 가져올 수 있습니다.
-              </p>
-
-              <button
-                type="button"
-                onClick={handleLoadExample}
-                disabled={importing}
-                className="cp-button-secondary mt-3"
-              >
-                예시로 시작하기
-              </button>
-            </div>
-          ) : (
-            <>
-              <label className="mt-3 block">
-                <span className="sr-only">프로젝트 이름 검색</span>
-
-                <input
-                  type="search"
-                  value={projectSearch}
-                  onChange={(event) => setProjectSearch(event.target.value)}
-                  placeholder="프로젝트 이름 검색"
-                  className="cp-input"
-                />
-              </label>
-
-              {filteredProjects.length === 0 ? (
-                <p role="status" className="mt-3 text-xs text-slate-500">
-                  검색 결과가 없습니다. 다른 이름으로 검색하세요.
-                </p>
-              ) : (
-                <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
-                  {filteredProjects.map((project) => (
-                    <li key={project.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleLoad(project)}
-                        disabled={importing}
-                        className={`w-full rounded-md border p-3 text-left transition-colors ${
-                          project.id === projectId
-                            ? "border-blue-200 bg-blue-50"
-                            : "border-slate-200 bg-white hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="break-words text-sm font-semibold text-slate-800">
-                            {project.siteInput.name || "이름 없는 프로젝트"}
-                          </span>
-
-                          {project.id === projectId && (
-                            <span className="text-[11px] font-medium text-blue-700">
-                              현재 프로젝트
-                            </span>
-                          )}
-                        </span>
-
-                        <span className="mt-2 block text-xs text-slate-500">
-                          {project.siteInput.shape === "L"
-                            ? "ㄱ자"
-                            : project.siteInput.shape === "U"
-                              ? "ㄷ자"
-                              : "직사각형"}
-                          {" · "}
-                          {project.siteInput.widthMm || "미입력"} ×{" "}
-                          {project.siteInput.lengthMm || "미입력"} mm
-                        </span>
-
-                        <span className="mt-1 block text-[11px] text-slate-500">
-                          수정일{" "}
-                          {new Date(project.updatedAt).toLocaleString("ko-KR", {
-                            timeZone: "Asia/Seoul",
-                          })}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </section>
+      </WorkspaceDialog>
+    </>
   );
 }

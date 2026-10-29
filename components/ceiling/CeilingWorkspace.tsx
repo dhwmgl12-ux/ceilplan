@@ -26,7 +26,6 @@ import {
   validateAdjustments,
   validateInputs,
 } from "@/lib/calculations/base";
-import ProjectHeader from "@/components/layout/ProjectHeader";
 import InputPanel from "./InputPanel";
 import MaterialInputPanel, {
   type MaterialInputPanelHandle,
@@ -34,7 +33,7 @@ import MaterialInputPanel, {
 import CeilingPreview from "./CeilingPreview";
 import ResultsPanel from "./ResultsPanel";
 import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
-import Sidebar, { type SidebarMenu } from "@/components/layout/Sidebar";
+import type { SidebarMenu } from "@/components/layout/Sidebar";
 import FeatureInputPanel from "./FeatureInputPanel";
 import FeatureToolsPanel from "./FeatureToolsPanel";
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
@@ -614,21 +613,9 @@ export default function CeilingWorkspace({
 
   const projectManagerRef = useRef<ProjectManagerHandle>(null);
 
-  const [activeMenu, setActiveMenu] = useState<SidebarMenu>("dashboard");
-
   function handleNavigate(menu: SidebarMenu) {
-    setActiveMenu(menu);
-
     if (menu === "projects") {
       projectManagerRef.current?.openList();
-
-      requestAnimationFrame(() => {
-        document.getElementById("projects")?.scrollIntoView({
-          behavior: "auto",
-          block: "start",
-        });
-      });
-
       return;
     }
 
@@ -637,7 +624,6 @@ export default function CeilingWorkspace({
 
   function moveToSection(id: "inputs" | "preview" | "results") {
     setWorkspaceSection(id);
-    setActiveMenu(id === "results" ? "results" : "dashboard");
 
     if (id === "inputs") {
       setInputPanelOpen(true);
@@ -695,35 +681,25 @@ export default function CeilingWorkspace({
             </p>
           </header>
         ) : (
-          <>
-            <Sidebar
-              activeMenu={activeMenu}
-              onNavigate={handleNavigate}
-              hasUnsavedChanges={dirty}
-            />
-
-            <ProjectHeader
-              projectName={inputs.name}
-              areaM2={areaM2}
+          <div id="project-save-area" tabIndex={-1}>
+            <ProjectManager
+              key={projectManagerKey}
+              ref={projectManagerRef}
+              siteInput={inputs}
+              materialInput={materialInputs}
+              features={features}
+              adjustments={adjustments}
+              snapshot={snapshot}
               dirty={dirty}
-            >
-              <div id="project-save-area" tabIndex={-1}>
-                <ProjectManager
-                  key={projectManagerKey}
-                  ref={projectManagerRef}
-                  siteInput={inputs}
-                  materialInput={materialInputs}
-                  features={features}
-                  adjustments={adjustments}
-                  snapshot={snapshot}
-                  dirty={dirty}
-                  onLoad={handleLoadProject}
-                  onNew={handleNewProject}
-                  onSaved={() => setDirty(false)}
-                />
-              </div>
-            </ProjectHeader>
-          </>
+              areaM2={areaM2}
+              stale={stale}
+              onLoad={handleLoadProject}
+              onNew={handleNewProject}
+              onSaved={() => setDirty(false)}
+              onCalculate={handleCalculate}
+              onShowResults={() => moveToSection("results")}
+            />
+          </div>
         )}
       </div>
 
