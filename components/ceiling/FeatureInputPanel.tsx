@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   featureColors,
   featureLabels,
@@ -30,6 +30,7 @@ export default function FeatureInputPanel({
   onSelectFeature,
 }: FeatureInputPanelProps) {
   const [type, setType] = useState<CeilingFeatureType>("AIR_CONDITIONER");
+  const coordinateFormRef = useRef<HTMLDetailsElement>(null);
 
   const [draft, setDraft] = useState({
     xMm: "",
@@ -79,6 +80,14 @@ export default function FeatureInputPanel({
     });
     setError("");
     setEditingOriginal({ ...feature });
+    if (coordinateFormRef.current) {
+      coordinateFormRef.current.open = true;
+
+      coordinateFormRef.current.scrollIntoView({
+        behavior: "auto",
+        block: "nearest",
+      });
+    }
   }
 
   function handleSubmit() {
@@ -167,8 +176,55 @@ export default function FeatureInputPanel({
   return (
     <section aria-labelledby="feature-input-title" className="p-5">
       <h2 id="feature-input-title" className="cp-title">
-        현장 요소
+        요소 추가
       </h2>
+
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        종류를 선택하고 위치와 크기를 입력하세요.
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {Object.entries(featureLabels).map(([value, label]) => {
+          const featureType = value as CeilingFeatureType;
+
+          return (
+            <button
+              key={value}
+              type="button"
+              disabled={editingId !== null}
+              onClick={() => {
+                setType(featureType);
+                setError("");
+
+                if (coordinateFormRef.current) {
+                  coordinateFormRef.current.open = true;
+                }
+              }}
+              className="flex min-h-14 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 border-2"
+                style={{
+                  borderColor: featureColors[featureType],
+                  borderRadius: featureType === "SPRINKLER" ? "50%" : "3px",
+                  borderStyle:
+                    featureType === "INSPECTION_HATCH" ? "dashed" : "solid",
+                }}
+              />
+
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {editingId !== null && (
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          수정 적용 또는 취소 후 새 요소를 추가할 수 있습니다.
+        </p>
+      )}
+
       <PendingInputNotice visible={hasPendingInput} label="현장 요소 폼" />
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
@@ -176,149 +232,242 @@ export default function FeatureInputPanel({
         보강하지 않습니다. 자재 증감은 현장 조정값에서 직접 입력하세요.
       </p>
 
-      <label className="mt-4 block text-sm font-medium">
-        요소 종류
-        <select
-          value={type}
-          onChange={(event) =>
-            setType(event.target.value as CeilingFeatureType)
-          }
-          className="cp-input mt-2"
-        >
-          {Object.entries(featureLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <details
+        ref={coordinateFormRef}
+        className="mt-4 rounded-lg border border-slate-200"
+      >
+        <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-slate-700">
+          {editingId !== null ? "요소 좌표 수정" : "좌표로 요소 추가"}
+        </summary>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {(
-          [
-            ["xMm", "왼쪽에서 X"],
-            ["yMm", "위쪽에서 Y"],
-            ["widthMm", "요소 가로"],
-            ["lengthMm", "요소 세로"],
-          ] as const
-        ).map(([field, label]) => (
-          <label key={field} className="block text-sm font-medium">
-            {label} (mm)
-            <input
-              type="number"
-              min={field === "xMm" || field === "yMm" ? 0 : 1}
-              step="1"
-              value={draft[field]}
-              onChange={(event) => {
-                const value = event.target.value;
-
-                setDraft((previous) => ({
-                  ...previous,
-                  [field]: value,
-                }));
-
-                setError("");
-              }}
-              placeholder="직접 입력"
+        <div className="border-t border-slate-100 px-3 pb-3">
+          <label className="mt-4 block text-sm font-medium">
+            요소 종류
+            <select
+              value={type}
+              onChange={(event) =>
+                setType(event.target.value as CeilingFeatureType)
+              }
               className="cp-input mt-2"
-            />
+            >
+              {Object.entries(featureLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </label>
-        ))}
-      </div>
 
-      {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {(
+              [
+                ["xMm", "왼쪽에서 X"],
+                ["yMm", "위쪽에서 Y"],
+                ["widthMm", "요소 가로"],
+                ["lengthMm", "요소 세로"],
+              ] as const
+            ).map(([field, label]) => (
+              <label key={field} className="block text-sm font-medium">
+                {label} (mm)
+                <input
+                  type="number"
+                  min={field === "xMm" || field === "yMm" ? 0 : 1}
+                  step="1"
+                  value={draft[field]}
+                  onChange={(event) => {
+                    const value = event.target.value;
 
-      {editingId !== null && (
-        <p role="status" className="mt-3 text-xs leading-5 text-blue-700">
-          {features.findIndex((feature) => feature.id === editingId) + 1}번
-          요소를 수정 중입니다. 수정 적용을 눌러야 반영됩니다. 다른 요소를
-          선택해도 이 수정 폼의 대상은 바뀌지 않습니다.
-        </p>
-      )}
+                    setDraft((previous) => ({
+                      ...previous,
+                      [field]: value,
+                    }));
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="cp-button-primary flex-1"
-        >
-          {editingId !== null ? "요소 수정 적용" : "요소 추가"}
-        </button>
+                    setError("");
+                  }}
+                  placeholder="직접 입력"
+                  className="cp-input mt-2"
+                />
+              </label>
+            ))}
+          </div>
 
-        {editingId !== null && (
-          <button
-            type="button"
-            onClick={resetForm}
-            className="cp-button-secondary"
-          >
-            수정 취소
-          </button>
-        )}
-      </div>
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-red-700">
+              {error}
+            </p>
+          )}
 
-      <ul className="mt-4 space-y-2">
-        {features.map((feature, index) => (
-          <li
-            key={feature.id}
-            className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
-              activeFeatureId === feature.id
-                ? "border-blue-500 bg-blue-50"
-                : "border-transparent bg-slate-50"
-            }`}
-          >
-            <div>
-              <p
-                className="text-sm font-semibold"
-                style={{ color: featureColors[feature.type] }}
-              >
-                {index + 1}. {featureLabels[feature.type]}
-              </p>
+          {editingId !== null && (
+            <p role="status" className="mt-3 text-xs leading-5 text-blue-700">
+              {features.findIndex((feature) => feature.id === editingId) + 1}번
+              요소를 수정 중입니다. 수정 적용을 눌러야 반영됩니다. 다른 요소를
+              선택해도 이 수정 폼의 대상은 바뀌지 않습니다.
+            </p>
+          )}
 
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                X {feature.xMm}, Y {feature.yMm} mm
-                <br />
-                {feature.widthMm} × {feature.lengthMm} mm
-              </p>
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="cp-button-primary flex-1"
+            >
+              {editingId !== null ? "요소 수정 적용" : "요소 추가"}
+            </button>
 
-            <div className="flex shrink-0 flex-col gap-2">
+            {editingId !== null && (
               <button
-                id={`feature-select-${feature.id}`}
                 type="button"
-                onClick={() => onSelectFeature(feature.id)}
-                aria-pressed={activeFeatureId === feature.id}
-                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 선택`}
+                onClick={resetForm}
                 className="cp-button-secondary"
               >
-                {activeFeatureId === feature.id ? "선택됨" : "선택"}
+                수정 취소
               </button>
+            )}
+          </div>
+        </div>
+      </details>
 
-              <button
-                type="button"
-                onClick={() => startEditing(feature)}
-                disabled={editingId !== null && editingId !== feature.id}
-                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 수정`}
-                className="cp-button-secondary disabled:opacity-50"
-              >
-                수정
-              </button>
+      <div className="mt-5 border-t border-slate-200 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-900">요소 목록</h3>
 
-              <button
-                type="button"
-                onClick={() => onDelete(feature.id)}
-                aria-label={`${index + 1}번 ${featureLabels[feature.type]} 삭제`}
-                className="min-h-11 rounded px-3 py-2 text-xs text-red-700 hover:bg-red-50"
-              >
-                삭제
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+          <span className="text-xs text-slate-500">총 {features.length}개</span>
+        </div>
+
+        {features.length === 0 ? (
+          <div className="mt-3 rounded-lg bg-slate-50 px-3 py-4">
+            <p className="text-xs font-medium text-slate-700">
+              등록된 요소가 없습니다.
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              위에서 종류를 선택하고 위치와 크기를 입력해 추가하세요.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {Object.entries(featureLabels).map(([value, label]) => {
+              const featureType = value as CeilingFeatureType;
+              const groupedFeatures = features.filter(
+                (feature) => feature.type === featureType,
+              );
+
+              if (groupedFeatures.length === 0) return null;
+
+              return (
+                <details
+                  key={value}
+                  open
+                  className="rounded-lg border border-slate-200"
+                >
+                  <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-slate-700">
+                    {label}
+
+                    <span className="ml-2 text-xs font-normal text-slate-500">
+                      {groupedFeatures.length}개
+                    </span>
+                  </summary>
+
+                  <ul className="space-y-1 border-t border-slate-100 p-2">
+                    {groupedFeatures.map((feature) => {
+                      const number =
+                        features.findIndex((item) => item.id === feature.id) +
+                        1;
+
+                      const selected = activeFeatureId === feature.id;
+
+                      return (
+                        <li
+                          key={feature.id}
+                          className={`rounded-lg border ${
+                            selected
+                              ? "border-blue-300 bg-blue-50"
+                              : "border-transparent bg-white"
+                          }`}
+                        >
+                          <button
+                            id={`feature-select-${feature.id}`}
+                            type="button"
+                            onClick={() => onSelectFeature(feature.id)}
+                            aria-pressed={selected}
+                            aria-label={`${number}번 ${label} 선택`}
+                            className="flex w-full items-start gap-2 rounded-lg px-3 py-3 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="mt-0.5 h-3 w-3 shrink-0 border-2"
+                              style={{
+                                borderColor: featureColors[feature.type],
+                                borderRadius:
+                                  feature.type === "SPRINKLER" ? "50%" : "2px",
+                                borderStyle:
+                                  feature.type === "INSPECTION_HATCH"
+                                    ? "dashed"
+                                    : "solid",
+                              }}
+                            />
+
+                            <span className="min-w-0 flex-1">
+                              <span
+                                className={`block text-xs font-semibold ${
+                                  selected ? "text-blue-700" : "text-slate-800"
+                                }`}
+                              >
+                                {number}번 {label}
+                              </span>
+
+                              <span className="mt-1 block text-xs text-slate-500">
+                                {feature.widthMm} × {feature.lengthMm} mm
+                              </span>
+                            </span>
+
+                            {selected && (
+                              <span className="shrink-0 text-xs font-medium text-blue-600">
+                                선택됨
+                              </span>
+                            )}
+                          </button>
+
+                          {selected && (
+                            <div className="border-t border-blue-100 px-3 pb-3 pt-2">
+                              <p className="text-xs leading-5 text-slate-600">
+                                X {feature.xMm}, Y {feature.yMm} mm
+                              </p>
+
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing(feature)}
+                                  disabled={
+                                    editingId !== null &&
+                                    editingId !== feature.id
+                                  }
+                                  className="cp-button-secondary flex-1 disabled:opacity-50"
+                                >
+                                  좌표 수정
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onDelete(feature.id)}
+                                  aria-label={`${number}번 ${label} 삭제`}
+                                  className="min-h-11 rounded-lg px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </details>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

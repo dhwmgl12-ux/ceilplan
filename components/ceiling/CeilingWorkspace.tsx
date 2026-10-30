@@ -192,7 +192,7 @@ export default function CeilingWorkspace({
   function handleShowSelectedInList() {
     if (!activeFeatureId) return;
 
-    moveToSection("inputs");
+    openEditArea("tools");
 
     if (featureDetailsRef.current) {
       featureDetailsRef.current.open = true;
@@ -203,10 +203,23 @@ export default function CeilingWorkspace({
         `feature-select-${activeFeatureId}`,
       );
 
-      button?.focus({ preventScroll: true });
-      button?.scrollIntoView({
+      if (!button) return;
+
+      // 선택 항목이 접힌 종류별 목록 안에 있어도 펼칩니다.
+      let ancestor = button.parentElement;
+
+      while (ancestor && ancestor.id !== "workspace-tools") {
+        if (ancestor instanceof HTMLDetailsElement) {
+          ancestor.open = true;
+        }
+
+        ancestor = ancestor.parentElement;
+      }
+
+      button.focus({ preventScroll: true });
+      button.scrollIntoView({
         behavior: "auto",
-        block: "center",
+        block: "nearest",
       });
     });
   }
@@ -874,10 +887,11 @@ export default function CeilingWorkspace({
             <details
               ref={featureDetailsRef}
               key={featureFormKey}
+              open
               className="rounded-lg border border-slate-200 bg-white"
             >
               <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
-                현장 요소 입력·목록
+                현장 요소
                 <span className="ml-2 text-xs text-slate-500">
                   {features.length}개
                 </span>
