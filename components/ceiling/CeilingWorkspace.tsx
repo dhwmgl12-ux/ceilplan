@@ -802,6 +802,49 @@ export default function CeilingWorkspace({
             tabIndex={0}
             className="cp-task-pane cp-task-setup cp-shell-pane space-y-4"
           >
+            <div className="rounded-lg border border-[var(--cp-border)] bg-white p-4">
+              <h2 className="text-sm font-semibold text-slate-800">
+                공간·자재 설정
+              </h2>
+
+              <p className="mt-2 text-xs leading-6 text-slate-500">
+                공간 치수와 계산에 사용할 조건을 입력하세요. 현장 요소 배치와
+                조정값은 요소 편집에서 관리합니다.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => moveToSection("preview")}
+                className="cp-button-secondary mt-3"
+              >
+                요소 편집으로 이동
+              </button>
+            </div>
+
+            {errors.length > 0 && (
+              <div
+                ref={errorSummaryRef}
+                id="calculation-errors"
+                role="alert"
+                tabIndex={-1}
+                aria-labelledby="calculation-errors-title"
+                className="rounded-lg border border-red-200 bg-red-50 p-4"
+              >
+                <p
+                  id="calculation-errors-title"
+                  className="text-sm font-semibold text-red-800"
+                >
+                  입력값을 확인해 주세요.
+                </p>
+
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-6 text-red-700">
+                  {errors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <InputPanel
               inputs={inputs}
               onChange={handleInputChange}
@@ -815,39 +858,10 @@ export default function CeilingWorkspace({
               showValidation={errors.length > 0}
             />
 
-            <div className="cp-card">
-              {errors.length > 0 && (
-                <div
-                  ref={errorSummaryRef}
-                  id="calculation-errors"
-                  role="alert"
-                  tabIndex={-1}
-                  aria-labelledby="calculation-errors-title"
-                  className="mb-4 rounded-md bg-red-50 p-3"
-                >
-                  <p
-                    id="calculation-errors-title"
-                    className="text-sm font-semibold text-red-800"
-                  >
-                    입력값을 확인해 주세요.
-                  </p>
-
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-red-700">
-                    {errors.map((error) => (
-                      <li key={error}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCalculate}
-                className="cp-button-primary w-full"
-              >
-                예상 자재 계산하기
-              </button>
-            </div>
+            <p className="px-1 text-[11px] leading-6 text-slate-500">
+              조건을 입력한 뒤 상단의 산출 계산을 실행하세요. 단가를 비워도
+              수량은 계산할 수 있지만, 전체 예상 금액은 미완성으로 표시됩니다.
+            </p>
           </div>
 
           <div
@@ -906,6 +920,8 @@ export default function CeilingWorkspace({
               onSelectFeature={handleSelectFeature}
               onAdd={handleAddFeature}
               onUpdate={handleUpdateFeature}
+              editable={activeTab === "EDIT"}
+              onRequestEdit={() => moveToSection("preview")}
             />
           </div>
 

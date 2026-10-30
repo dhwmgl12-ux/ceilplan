@@ -815,7 +815,7 @@ summary {
   }
 
   .cp-task-workspace[data-tab="SETUP"] {
-    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-columns: 380px minmax(0, 1fr);
   }
 
   .cp-task-workspace[data-tab="SETUP"] > .cp-task-canvas {
@@ -840,6 +840,22 @@ summary {
 @media (min-width: 1800px) {
   .cp-task-workspace[data-tab="EDIT"] {
     grid-template-columns: 300px minmax(0, 1fr) 360px;
+  }
+}
+
+/* 캔버스 내부에서 숨긴 설정 그룹은 확실히 숨김 */
+.cp-canvas-panel > [hidden] {
+  display: none;
+}
+
+/* 도구 모음의 기존 좌우 여백 유지 */
+.cp-canvas-panel > div > .cp-canvas-tools {
+  margin-inline: -16px;
+}
+
+@media (min-width: 1800px) {
+  .cp-task-workspace[data-tab="SETUP"] {
+    grid-template-columns: 420px minmax(0, 1fr);
   }
 }
 

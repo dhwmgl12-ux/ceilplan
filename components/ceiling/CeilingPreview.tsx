@@ -22,9 +22,10 @@ interface CeilingPreviewProps {
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
-
   activeFeatureId: string | null;
   onSelectFeature: (id: string | null) => void;
+  editable?: boolean;
+  onRequestEdit?: () => void;
 }
 
 export default function CeilingPreview({
@@ -34,10 +35,13 @@ export default function CeilingPreview({
   onSelectFeature,
   onAdd,
   onUpdate,
+  editable = true,
+  onRequestEdit,
 }: CeilingPreviewProps) {
   const background = useDrawingBackground();
   const backgroundClipId = useId().replaceAll(":", "");
   const [pointerMode, setPointerMode] = useState<FeaturePointerMode>("VIEW");
+  const effectiveMode: FeaturePointerMode = editable ? pointerMode : "VIEW";
 
   const [placementType, setPlacementType] =
     useState<CeilingFeatureType>("AIR_CONDITIONER");
@@ -103,7 +107,7 @@ export default function CeilingPreview({
     x,
     y,
     scale,
-    mode: pointerMode,
+    mode: effectiveMode,
     featureType: placementType,
     widthMm: placementWidth,
     lengthMm: placementLength,
@@ -117,11 +121,13 @@ export default function CeilingPreview({
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cp-border)] px-4 py-3">
         <div>
           <h2 id="preview-title" className="cp-title">
-            설계 캔버스
+            {editable ? "설계 캔버스" : "공간 미리보기"}
           </h2>
 
           <p className="mt-1 text-[11px] text-slate-500">
-            입력한 공간과 현장 요소의 2D 미리보기
+            {editable
+              ? "요소를 선택·배치·이동합니다."
+              : "입력한 공간 형태와 치수를 확인합니다. 요소 편집은 별도 탭에서 진행합니다."}
           </p>
         </div>
 
@@ -130,30 +136,54 @@ export default function CeilingPreview({
         </span>
       </header>
 
-      <CanvasToolbar
-        mode={pointerMode}
-        onModeChange={(mode) => {
-          pointer.clearSession();
-          setPointerMode(mode);
-        }}
-        placementType={placementType}
-        onTypeChange={(type) => {
-          pointer.clearSession();
-          setPlacementType(type);
-        }}
-        placementWidth={placementWidth}
-        onWidthChange={(value) => {
-          pointer.clearSession();
-          setPlacementWidth(value);
-        }}
-        placementLength={placementLength}
-        onLengthChange={(value) => {
-          pointer.clearSession();
-          setPlacementLength(value);
-        }}
-        isValid={isValid}
-        message={pointer.message}
-      />
+      <div hidden={!editable}>
+        <CanvasToolbar
+          mode={pointerMode}
+          onModeChange={(mode) => {
+            pointer.clearSession();
+            setPointerMode(mode);
+          }}
+          placementType={placementType}
+          onTypeChange={(type) => {
+            pointer.clearSession();
+            setPlacementType(type);
+          }}
+          placementWidth={placementWidth}
+          onWidthChange={(value) => {
+            pointer.clearSession();
+            setPlacementWidth(value);
+          }}
+          placementLength={placementLength}
+          onLengthChange={(value) => {
+            pointer.clearSession();
+            setPlacementLength(value);
+          }}
+          isValid={isValid}
+          message={pointer.message}
+        />
+      </div>
+
+      {!editable && (
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p
+            id="setup-preview-help"
+            className="text-xs leading-5 text-slate-500"
+          >
+            이 화면은 확인용입니다. 현장 요소 추가·이동은 요소 편집에서
+            진행하세요.
+          </p>
+
+          {onRequestEdit && (
+            <button
+              type="button"
+              onClick={onRequestEdit}
+              className="cp-button-secondary mt-2"
+            >
+              요소 편집으로 이동
+            </button>
+          )}
+        </div>
+      )}
 
       {isValid ? (
         <svg
@@ -162,18 +192,20 @@ export default function CeilingPreview({
           className="cp-canvas-svg"
           role="group"
           aria-labelledby="room-title room-description"
-          aria-describedby="preview-pointer-help"
+          aria-describedby={
+            editable ? "preview-pointer-help" : "setup-preview-help"
+          }
           style={{
-            touchAction: pointerMode === "VIEW" ? "auto" : "none",
+            touchAction: effectiveMode === "VIEW" ? "auto" : "none",
             cursor:
-              pointerMode === "PLACE"
+              effectiveMode === "PLACE"
                 ? "crosshair"
-                : pointerMode === "MOVE"
+                : effectiveMode === "MOVE"
                   ? "grab"
                   : "default",
           }}
           onClick={(event) => {
-            if (pointerMode !== "VIEW") return;
+            if (!editable || effectiveMode !== "VIEW") return;
 
             const target = event.target;
             if (!(target instanceof Element)) return;
@@ -184,9 +216,9 @@ export default function CeilingPreview({
 
             onSelectFeature(id ?? null);
           }}
-          onPointerDown={pointer.handlePointerDown}
-          onPointerMove={pointer.handlePointerMove}
-          onPointerUp={pointer.handlePointerUp}
+          onPointerDown={editable ? pointer.handlePointerDown : undefined}
+          onPointerMove={editable ? pointer.handlePointerMove : undefined}
+          onPointerUp={editable ? pointer.handlePointerUp : undefined}
           onPointerCancel={pointer.handlePointerCancel}
           onLostPointerCapture={pointer.handlePointerCancel}
         >
@@ -261,11 +293,18 @@ export default function CeilingPreview({
               <g
                 key={feature.id}
                 data-feature-id={feature.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${number}번 ${label} 선택`}
-                aria-pressed={activeFeatureId === feature.id}
+                role={editable ? "button" : undefined}
+                tabIndex={editable ? 0 : undefined}
+                aria-label={
+                  editable
+                    ? `${number}번 ${label} 선택`
+                    : `${number}번 ${label}`
+                }
+                aria-pressed={
+                  editable ? activeFeatureId === feature.id : undefined
+                }
                 onKeyDown={(event) => {
+                  if (!editable) return;
                   if (event.key !== "Enter" && event.key !== " ") return;
 
                   event.preventDefault();
@@ -542,7 +581,7 @@ export default function CeilingPreview({
             })}
           </g>
 
-          {pointer.draft && (
+          {editable && pointer.draft && (
             <rect
               x={x + pointer.draft.xMm * scale}
               y={y + pointer.draft.yMm * scale}
@@ -615,7 +654,9 @@ export default function CeilingPreview({
       <p className="mt-3 text-xs leading-5 text-slate-500">
         공간 형태를 확인하는 미리보기이며, 실제 자재 배치도는 아닙니다.
       </p>
-      <DrawingBackgroundPanel background={background} />
+      <div hidden={!editable}>
+        <DrawingBackgroundPanel background={background} />
+      </div>
     </section>
   );
 }
