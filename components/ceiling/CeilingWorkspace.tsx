@@ -8,15 +8,18 @@ import {
   useState,
   type Ref,
 } from "react";
+
 import type {
   Adjustment,
   CalculationSnapshot,
   CeilingFeature,
+  CeilingFeatureType,
   MaterialInput,
   Project,
   SiteInput,
   StoredProjectV2,
 } from "@/types/ceilplan";
+
 import DraftRecovery from "./DraftRecovery";
 import { SINGLE_DRAFT_KEY } from "@/lib/draft-storage";
 import { normalizeProjectData } from "@/lib/project-io";
@@ -26,19 +29,31 @@ import {
   validateAdjustments,
   validateInputs,
 } from "@/lib/calculations/base";
+
 import InputPanel from "./InputPanel";
+
 import MaterialInputPanel, {
   type MaterialInputPanelHandle,
 } from "./MaterialInputPanel";
-import CeilingPreview from "./CeilingPreview";
+
+import CeilingPreview, { type CeilingPreviewHandle } from "./CeilingPreview";
+
 import ResultsPanel from "./ResultsPanel";
+
 import ProjectManager, { type ProjectManagerHandle } from "./ProjectManager";
+
 import type { SidebarMenu } from "@/components/layout/Sidebar";
+
 import FeatureInputPanel from "./FeatureInputPanel";
+
 import FeatureToolsPanel from "./FeatureToolsPanel";
+
 import AdjustmentInputPanel from "./AdjustmentInputPanel";
+
 import UsageGuide from "./UsageGuide";
+
 import { tryGetRoomGeometry } from "@/lib/geometry/room";
+
 import {
   createEditorHistory,
   editorHistoryReducer,
@@ -180,6 +195,18 @@ export default function CeilingWorkspace({
     : null;
 
   const featureDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  const ceilingPreviewRef = useRef<CeilingPreviewHandle>(null);
+
+  function handleBeginPlacement(type: CeilingFeatureType) {
+    if (!tryGetRoomGeometry(inputs)) {
+      moveToSection("inputs");
+      return;
+    }
+
+    openEditArea("canvas");
+    ceilingPreviewRef.current?.beginPlacement(type);
+  }
 
   function handleSelectFeature(id: string | null) {
     if (id !== null && !features.some((feature) => feature.id === id)) {
@@ -903,6 +930,7 @@ export default function CeilingWorkspace({
                   features={features}
                   activeFeatureId={activeFeatureId}
                   onSelectFeature={handleSelectFeature}
+                  onRequestPlacement={handleBeginPlacement}
                   onAdd={handleAddFeature}
                   onUpdate={handleUpdateFeature}
                   onDelete={handleDeleteFeature}
@@ -927,6 +955,7 @@ export default function CeilingWorkspace({
             className="cp-task-pane cp-task-canvas cp-shell-pane"
           >
             <CeilingPreview
+              ref={ceilingPreviewRef}
               key={featureFormKey}
               inputs={inputs}
               features={features}

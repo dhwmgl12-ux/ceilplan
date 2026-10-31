@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useDrawingBackground } from "@/hooks/useDrawingBackground";
 import DrawingBackgroundPanel from "./DrawingBackgroundPanel";
 import {
@@ -17,7 +17,12 @@ import {
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
 import CanvasToolbar from "./CanvasToolbar";
 
+export interface CeilingPreviewHandle {
+  beginPlacement: (type: CeilingFeatureType) => void;
+}
+
 interface CeilingPreviewProps {
+  ref?: Ref<CeilingPreviewHandle>;
   inputs: SiteInput;
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
@@ -29,6 +34,7 @@ interface CeilingPreviewProps {
 }
 
 export default function CeilingPreview({
+  ref,
   inputs,
   features,
   activeFeatureId,
@@ -40,6 +46,7 @@ export default function CeilingPreview({
 }: CeilingPreviewProps) {
   const background = useDrawingBackground();
   const backgroundClipId = useId().replaceAll(":", "");
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const [pointerMode, setPointerMode] = useState<FeaturePointerMode>("VIEW");
   const effectiveMode: FeaturePointerMode = editable ? pointerMode : "VIEW";
 
@@ -116,6 +123,28 @@ export default function CeilingPreview({
     onSelectFeature,
   });
 
+  useImperativeHandle(ref, () => ({
+    beginPlacement(type) {
+      pointer.clearSession();
+      setPlacementType(type);
+      setPointerMode("PLACE");
+
+      // 배치 크기는 사용자가 입력합니다.
+      // 기존에 입력한 가로·세로 값은 유지합니다.
+      requestAnimationFrame(() => {
+        const input =
+          toolbarRef.current?.querySelector<HTMLInputElement>("input");
+
+        input?.focus({ preventScroll: true });
+
+        toolbarRef.current?.scrollIntoView({
+          behavior: "auto",
+          block: "nearest",
+        });
+      });
+    },
+  }));
+
   return (
     <section aria-labelledby="preview-title" className="cp-canvas-panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cp-border)] px-4 py-3">
@@ -136,7 +165,7 @@ export default function CeilingPreview({
         </span>
       </header>
 
-      <div hidden={!editable}>
+      <div ref={toolbarRef} hidden={!editable}>
         <CanvasToolbar
           mode={pointerMode}
           onModeChange={(mode) => {
@@ -203,6 +232,15 @@ export default function CeilingPreview({
                 : effectiveMode === "MOVE"
                   ? "grab"
                   : "default",
+          }}
+          onKeyDown={(event) => {
+            if (!editable || event.key !== "Escape") return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            pointer.clearSession();
+            setPointerMode("VIEW");
           }}
           onClick={(event) => {
             if (!editable || effectiveMode !== "VIEW") return;
@@ -311,6 +349,7 @@ export default function CeilingPreview({
                   event.stopPropagation();
 
                   pointer.clearSession();
+                  setPointerMode("VIEW");
                   onSelectFeature(feature.id);
                 }}
               >

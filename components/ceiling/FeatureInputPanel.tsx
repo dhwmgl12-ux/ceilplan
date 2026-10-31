@@ -18,6 +18,7 @@ interface FeatureInputPanelProps {
   onDelete: (id: string) => void;
   activeFeatureId: string | null;
   onSelectFeature: (id: string | null) => void;
+  onRequestPlacement: (type: CeilingFeatureType) => void;
 }
 
 export default function FeatureInputPanel({
@@ -28,6 +29,7 @@ export default function FeatureInputPanel({
   onDelete,
   activeFeatureId,
   onSelectFeature,
+  onRequestPlacement,
 }: FeatureInputPanelProps) {
   const [type, setType] = useState<CeilingFeatureType>("AIR_CONDITIONER");
   const coordinateFormRef = useRef<HTMLDetailsElement>(null);
@@ -180,7 +182,8 @@ export default function FeatureInputPanel({
       </h2>
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
-        종류를 선택하고 위치와 크기를 입력하세요.
+        종류를 선택한 뒤 캔버스에서 크기를 입력하고 배치하세요. 좌표를 직접
+        입력하려면 아래 입력란을 펼치세요.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -192,14 +195,7 @@ export default function FeatureInputPanel({
               key={value}
               type="button"
               disabled={editingId !== null}
-              onClick={() => {
-                setType(featureType);
-                setError("");
-
-                if (coordinateFormRef.current) {
-                  coordinateFormRef.current.open = true;
-                }
-              }}
+              onClick={() => onRequestPlacement(featureType)}
               className="flex min-h-14 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span
@@ -341,7 +337,8 @@ export default function FeatureInputPanel({
             </p>
 
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              위에서 종류를 선택하고 위치와 크기를 입력해 추가하세요.
+              위에서 종류를 선택하고 캔버스에 배치하거나, 좌표 입력란에서 위치와
+              크기를 입력해 추가하세요.
             </p>
           </div>
         ) : (

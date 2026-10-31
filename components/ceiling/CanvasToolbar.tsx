@@ -83,7 +83,9 @@ export default function CanvasToolbar({
                 disabled={!isValid && tool.mode !== "VIEW"}
                 aria-pressed={selected}
                 title={tool.description}
-                className="cp-button-secondary"
+                className={`cp-button-secondary ${
+                  selected ? "!border-blue-500 !bg-blue-50 !text-blue-700" : ""
+                }`}
               >
                 <svg
                   aria-hidden="true"
@@ -148,6 +150,12 @@ export default function CanvasToolbar({
               onChange={onLengthChange}
             />
           </div>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            입력한 크기로 배치합니다. 클릭한 지점은 요소의 중심이며, 오른쪽
+            속성의 X·Y는 요소 왼쪽 위 좌표입니다. 같은 크기를 반복 배치할 수
+            있고, 완료하려면 선택 도구를 누르세요.
+          </p>
         </fieldset>
       )}
 
@@ -172,6 +180,10 @@ export default function CanvasToolbar({
           <li>
             이동 모드에서는 요소를 끌어 놓습니다. 공간 밖이나 제외 영역에는
             배치할 수 없습니다.
+          </li>
+          <li>
+            캔버스에 포커스가 있을 때 Escape를 누르면 임시 작업을 취소하고 선택
+            모드로 돌아갑니다.
           </li>
         </ul>
       </details>
