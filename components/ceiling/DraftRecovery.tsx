@@ -6,6 +6,7 @@ import { parseDraft, replaceDraft, serializeDraft } from "@/lib/draft-storage";
 interface DraftRecoveryProps<T> {
   storageKey: string;
   dirty: boolean;
+  compact?: boolean;
   readData: () => T;
   normalize: (value: unknown) => T;
   onRecover: (data: T) => void;
@@ -25,6 +26,7 @@ export default function DraftRecovery<T>({
   readData,
   normalize,
   onRecover,
+  compact = false,
 }: DraftRecoveryProps<T>) {
   const latest = useRef({
     dirty,
@@ -234,6 +236,48 @@ export default function DraftRecovery<T>({
           : "임시저장본을 삭제하지 못했습니다.",
       );
     }
+  }
+
+  if (compact && !pending && !error) {
+    return (
+      <div className="min-w-0 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium text-slate-600">복구용 임시저장</span>
+
+          {savedAt ? (
+            <time dateTime={savedAt}>
+              마지막 저장{" "}
+              {new Date(savedAt).toLocaleTimeString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </time>
+          ) : (
+            <span>{dirty ? "임시저장 대기" : "현재 작업의 임시본 없음"}</span>
+          )}
+        </div>
+
+        <details className="mt-1">
+          <summary className="cursor-pointer">
+            임시저장 범위와 처리 안내
+          </summary>
+
+          <p className="mt-2 max-w-xl leading-5">
+            적용된 입력과 마지막 계산 결과를 이 브라우저에 임시 보관합니다. 수정
+            적용 전 입력, 드래그 중 위치, 도면 배경 이미지는 복구하지 않습니다.
+            프로젝트 수동 저장과 JSON 백업은 별도입니다.
+          </p>
+
+          {message && (
+            <p role="status" className="mt-1 leading-5">
+              {message}
+            </p>
+          )}
+        </details>
+      </div>
+    );
   }
 
   return (

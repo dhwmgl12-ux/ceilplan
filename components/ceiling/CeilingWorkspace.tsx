@@ -84,6 +84,18 @@ interface CeilingWorkspaceProps {
   spaceSession?: {
     initialSpace: CeilingSpace;
     onEdit: () => void;
+
+    projectDirty?: boolean;
+
+    navigation?: {
+      typeName: string;
+      spaces: {
+        id: string;
+        name: string;
+      }[];
+      onSelectSpace: (id: string) => void;
+      onOpenManagement: () => void;
+    };
   };
 }
 
@@ -513,6 +525,8 @@ export default function CeilingWorkspace({
     setDirty(false);
     setHistoryMessage("");
     setSelectedFeatureId(null);
+
+    moveToSection("inputs");
   }
 
   function readSingleDraft(): StoredProjectV2 {
@@ -782,14 +796,6 @@ export default function CeilingWorkspace({
                   onOpenProjects={() => handleNavigate("projects")}
                 />
               </div>
-
-              <DraftRecovery
-                storageKey={SINGLE_DRAFT_KEY}
-                dirty={dirty}
-                readData={readSingleDraft}
-                normalize={normalizeProjectData}
-                onRecover={recoverSingleDraft}
-              />
             </>
           )}
         </div>
@@ -931,6 +937,77 @@ export default function CeilingWorkspace({
             tabIndex={0}
             className="cp-task-pane cp-task-tools cp-shell-pane space-y-4"
           >
+            <section aria-labelledby="working-space-title" className="cp-card">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="working-space-title" className="cp-title">
+                  작업할 공간
+                </h2>
+
+                {spaceSession?.navigation && (
+                  <button
+                    type="button"
+                    onClick={spaceSession.navigation.onOpenManagement}
+                    className="cp-button-secondary"
+                  >
+                    공간 관리
+                  </button>
+                )}
+              </div>
+
+              {spaceSession?.navigation ? (
+                <>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {spaceSession.navigation.typeName}
+                  </p>
+
+                  <label className="mt-3 block">
+                    <span className="sr-only">편집할 공간 선택</span>
+
+                    <select
+                      value={spaceSession.initialSpace.id}
+                      onChange={(event) =>
+                        spaceSession.navigation?.onSelectSpace(
+                          event.target.value,
+                        )
+                      }
+                      className="cp-input"
+                    >
+                      {spaceSession.navigation.spaces.map((space) => (
+                        <option key={space.id} value={space.id}>
+                          {space.id === spaceSession.initialSpace.id
+                            ? inputs.name.trim() || "이름 없는 공간"
+                            : space.name || "이름 없는 공간"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                    공간을 전환하면 적용된 입력은 보관합니다. 미적용 입력·편집
+                    이력·도면 배경은 초기화됩니다.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-3 break-words text-sm font-medium text-slate-700">
+                  {inputs.name.trim() || "이름 없는 공간"}
+                </p>
+              )}
+
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                {room
+                  ? `${room.width.toLocaleString("ko-KR")} × ${room.length.toLocaleString("ko-KR")} mm`
+                  : "공간 형태와 치수를 먼저 입력하세요."}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => moveToSection("inputs")}
+                className="cp-button-secondary mt-3"
+              >
+                공간·자재 설정
+              </button>
+            </section>
+
             <details
               ref={featureDetailsRef}
               key={featureFormKey}
@@ -1075,6 +1152,18 @@ export default function CeilingWorkspace({
       </main>
 
       <footer className="cp-shell-status" aria-label="작업 상태">
+        {!isSpaceEditor && (
+          <div className="min-w-0 basis-full">
+            <DraftRecovery
+              compact
+              storageKey={SINGLE_DRAFT_KEY}
+              dirty={dirty}
+              readData={readSingleDraft}
+              normalize={normalizeProjectData}
+              onRecover={recoverSingleDraft}
+            />
+          </div>
+        )}
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
           <span className="text-xs font-medium text-slate-700">
             {isSpaceEditor ? "선택 공간 편집" : "단일 공간 작업"}
@@ -1094,13 +1183,11 @@ export default function CeilingWorkspace({
                 : "적용된 입력 기준 최신"}
           </span>
 
-          {!isSpaceEditor && (
-            <span className="text-[11px] text-slate-500">
-              {dirty
-                ? "프로젝트 미저장 변경사항 있음"
-                : "프로젝트 미저장 변경사항 없음"}
-            </span>
-          )}
+          <span className="text-[11px] text-slate-500">
+            {(spaceSession?.projectDirty ?? dirty)
+              ? "프로젝트 미저장 변경사항 있음"
+              : "프로젝트 미저장 변경사항 없음"}
+          </span>
         </div>
 
         <button

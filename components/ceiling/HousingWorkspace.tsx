@@ -256,9 +256,28 @@ export default function HousingWorkspace() {
   function selectSpace(id: string) {
     if (id === activeSpaceId) return;
 
-    setProject(readCurrentProject());
+    const next = readCurrentProject();
+    const type = next.unitTypes.find((item) => item.id === activeTypeId);
+
+    if (!type?.spaces.some((space) => space.id === id)) {
+      setError("선택한 타입에서 해당 공간을 찾을 수 없습니다.");
+      return;
+    }
+
+    // 현재 공간의 적용된 입력을 먼저 부모 프로젝트에 보관합니다.
+    setProject(next);
     setActiveSpaceId(id);
     setError("");
+  }
+
+  function openSpaceManagement() {
+    const element = document.getElementById("housing-space-management");
+
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
   }
 
   function addType() {
@@ -533,6 +552,7 @@ export default function HousingWorkspace() {
 
       <div className="cp-housing-section">
         <DraftRecovery
+          compact
           storageKey={HOUSING_DRAFT_KEY}
           dirty={dirty}
           readData={readCurrentProject}
@@ -542,6 +562,8 @@ export default function HousingWorkspace() {
       </div>
 
       <section
+        id="housing-space-management"
+        tabIndex={-1}
         aria-labelledby="housing-selection-title"
         className="cp-housing-section cp-card"
       >
@@ -752,6 +774,16 @@ export default function HousingWorkspace() {
               전체 계산 요약
             </h2>
 
+            <span
+              className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+                reportStale
+                  ? "bg-amber-50 text-amber-800"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {reportStale ? "이전 전체 결과 · 재계산 필요" : "전체 계산 결과"}
+            </span>
+
             <button
               type="button"
               onClick={handleDownloadHousingCsv}
@@ -861,6 +893,20 @@ export default function HousingWorkspace() {
             spaceSession={{
               initialSpace: activeSpace,
               onEdit: handleEditorChange,
+              projectDirty: dirty,
+
+              navigation: {
+                typeName: activeType?.name ?? "이름 없는 타입",
+
+                spaces:
+                  activeType?.spaces.map((space) => ({
+                    id: space.id,
+                    name: space.siteInput.name,
+                  })) ?? [],
+
+                onSelectSpace: selectSpace,
+                onOpenManagement: openSpaceManagement,
+              },
             }}
           />
         </div>
