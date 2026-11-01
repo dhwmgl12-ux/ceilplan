@@ -11,6 +11,8 @@ import { downloadText } from "@/lib/download";
 interface ResultsPanelProps {
   snapshot: CalculationSnapshot | null;
   stale: boolean;
+  onGoToInputs?: () => void;
+  onRecalculate?: () => void;
 }
 
 function formatQuantity(value: number) {
@@ -87,7 +89,12 @@ const formulas = [
   },
 ];
 
-export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
+export default function ResultsPanel({
+  snapshot,
+  stale,
+  onGoToInputs,
+  onRecalculate,
+}: ResultsPanelProps) {
   const [exportError, setExportError] = useState("");
 
   function handleDownloadCsv() {
@@ -126,6 +133,15 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
             공간 치수와 계산 조건을 입력한 뒤 계산하세요. 예상 발주 수량과 금액,
             계산 근거를 확인할 수 있습니다.
           </p>
+          {onGoToInputs && (
+            <button
+              type="button"
+              onClick={onGoToInputs}
+              className="cp-button-primary mt-4"
+            >
+              공간·자재 설정으로 이동
+            </button>
+          )}
         </div>
       </section>
     );
@@ -156,7 +172,7 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
                 : "bg-slate-100 text-slate-600"
             }`}
           >
-            {stale ? "이전 결과" : "계산 완료"}
+            {stale ? "이전 결과 · 재계산 필요" : "적용된 입력 기준 최신"}
           </span>
         </div>
 
@@ -174,69 +190,96 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
         </p>
 
         {stale && (
-          <p
+          <div
             id="result-stale-notice"
             role="status"
-            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3"
           >
-            입력이 변경됐거나 복원한 결과입니다. 아래 수량·금액·근거는 이전 계산
-            당시 값입니다. 다시 계산해야 CSV와 인쇄를 사용할 수 있습니다.
-          </p>
+            <p className="text-xs font-semibold text-amber-900">
+              아래 수량과 금액은 이전 계산 결과입니다.
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-amber-900">
+              입력이 변경됐거나 저장된 결과를 복원했습니다. 현재 적용된 입력으로
+              다시 계산해야 CSV와 인쇄를 사용할 수 있습니다.
+            </p>
+
+            {onRecalculate && (
+              <button
+                type="button"
+                onClick={onRecalculate}
+                className="cp-button-primary mt-3"
+              >
+                현재 입력으로 다시 계산
+              </button>
+            )}
+          </div>
         )}
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-medium text-slate-600">합계 예상 자재비</p>
+        <div
+          className="cp-review-summary-grid"
+          role="group"
+          aria-label="예상 발주 수량과 금액 요약"
+        >
+          {result.materials.map((material) => (
+            <div key={material.id} className="cp-review-summary-item">
+              <h3 className="text-xs font-semibold text-slate-700">
+                {material.name}
+              </h3>
 
-          <p className="mt-2 break-words text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
-            {result.totalEstimatedCost === null
-              ? "금액 미완성"
-              : formatMoney(result.totalEstimatedCost)}
-          </p>
+              <p className="mt-3 break-words text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
+                {formatQuantity(material.orderQuantity)}
 
-          <p className="mt-2 text-[11px] leading-5 text-slate-500">
-            {missingPrices.length > 0
-              ? `${missingPrices.join(" · ")} 단가를 입력하세요.`
-              : "자재비 기준 · VAT, 운송비, 인건비 제외"}
-          </p>
+                <span className="ml-1 text-sm font-medium text-slate-500">
+                  {material.purchaseUnit}
+                </span>
+              </p>
+
+              {material.quantityUnit === "m" && (
+                <p className="mt-1 text-xs text-slate-500">
+                  발주 총길이 {formatQuantity(material.orderedQuantity)} m
+                </p>
+              )}
+
+              <p className="mt-3 break-words text-sm font-medium text-slate-700 tabular-nums">
+                {formatMoney(material.estimatedCost)}
+              </p>
+            </div>
+          ))}
+
+          <div className="cp-review-summary-item cp-review-summary-total">
+            <h3 className="text-xs font-semibold text-blue-900">
+              합계 예상 자재비
+            </h3>
+
+            <p className="mt-3 break-words text-2xl font-bold tracking-tight text-blue-700 tabular-nums">
+              {result.totalEstimatedCost === null
+                ? "금액 미완성"
+                : formatMoney(result.totalEstimatedCost)}
+            </p>
+
+            <p className="mt-2 text-[11px] leading-5 text-slate-600">
+              {missingPrices.length > 0
+                ? `${missingPrices.join(" · ")} 단가 미입력`
+                : "모든 자재 단가 입력됨"}
+            </p>
+          </div>
         </div>
 
-        <h3 className="mt-5 text-xs font-semibold text-slate-700">
-          최종 발주 수량
-        </h3>
+        <p className="mt-3 text-[11px] leading-5 text-slate-500">
+          자재비 기준 · VAT, 운송비, 인건비 제외. 발주 수량과 단가는 아래 상세
+          내역에서 확인하세요.
+        </p>
 
-        <ul className="mt-2 divide-y divide-slate-100">
-          {result.materials.map((material) => (
-            <li
-              key={material.id}
-              className="flex items-start justify-between gap-3 py-3"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-700">
-                  {material.name}
-                </p>
-
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {formatMoney(material.estimatedCost)}
-                </p>
-              </div>
-
-              <div className="min-w-0 text-right">
-                <p className="break-words text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
-                  {formatQuantity(material.orderQuantity)}
-                  <span className="ml-1 text-xs font-medium text-slate-500">
-                    {material.purchaseUnit}
-                  </span>
-                </p>
-
-                {material.quantityUnit === "m" && (
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    총 {formatQuantity(material.orderedQuantity)} m
-                  </p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        {missingPrices.length > 0 && onGoToInputs && (
+          <button
+            type="button"
+            onClick={onGoToInputs}
+            className="cp-button-secondary mt-3"
+          >
+            공간·자재 설정에서 단가 입력
+          </button>
+        )}
 
         <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           <button
@@ -259,11 +302,14 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
         )}
       </div>
 
-      <ToolSection
-        title="상세 산출 내역"
-        description="기본 물량·현장 증감·Loss·최종 발주를 확인합니다."
-        status={`${result.materials.length}개 자재`}
-      >
+      <section aria-labelledby="material-detail-title" className="cp-card">
+        <h3 id="material-detail-title" className="cp-title">
+          상세 산출 내역
+        </h3>
+
+        <p className="mb-4 mt-2 text-xs leading-5 text-slate-500">
+          기본 물량·현장 증감·Loss·최종 발주를 확인합니다.
+        </p>
         <div
           role="region"
           aria-label="상세 자재 산출 표"
@@ -337,7 +383,7 @@ export default function ResultsPanel({ snapshot, stale }: ResultsPanelProps) {
           현장 증감은 Loss 전에 반영합니다. 금속의 기본 물량·증감은 m, 최종
           발주는 본 단위입니다. 상세 숫자는 자재별 계산 근거에서 확인하세요.
         </p>
-      </ToolSection>
+      </section>
 
       <ToolSection
         title="자재별 계산 근거"

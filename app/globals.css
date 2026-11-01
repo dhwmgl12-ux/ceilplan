@@ -859,6 +859,67 @@ summary {
   }
 }
 
+/* 산출 검토 화면 */
+.cp-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cp-review-result,
+.cp-review-checks,
+.cp-review-plans {
+  min-width: 0;
+}
+
+.cp-review-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.cp-review-summary-item {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+}
+
+.cp-review-summary-total {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+@media (min-width: 640px) {
+  .cp-review-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .cp-review-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .cp-review-plans {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1800px) {
+  .cp-review-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .cp-review-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 /* 발주용 보기 화면 */
 .order-print-dialog {
   position: fixed;

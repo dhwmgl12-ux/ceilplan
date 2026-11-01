@@ -1028,38 +1028,48 @@ export default function CeilingWorkspace({
             role="region"
             aria-label="산출 결과와 검토"
             tabIndex={0}
-            className="cp-task-pane cp-task-review cp-shell-pane space-y-4"
+            className="cp-task-pane cp-task-review cp-shell-pane"
           >
-            <ResultsPanel snapshot={snapshot} stale={stale} />
+            <div className="cp-review-layout">
+              <div className="cp-review-result">
+                <ResultsPanel
+                  snapshot={snapshot}
+                  stale={stale}
+                  onGoToInputs={() => moveToSection("inputs")}
+                  onRecalculate={handleCalculate}
+                />
+              </div>
 
-            <ToolSection
-              title="검토할 항목"
-              description="현재 입력과 결과 상태를 확인합니다."
-              status={`${reviewItems.length}개 항목`}
-            >
-              <ReviewPanel
-                items={reviewItems}
-                onNavigate={handleReviewNavigate}
-              />
-            </ToolSection>
+              <aside
+                aria-label="현재 작업의 검토 항목"
+                className="cp-review-checks cp-card"
+              >
+                <ReviewPanel
+                  items={reviewItems}
+                  onNavigate={handleReviewNavigate}
+                />
+              </aside>
 
-            <ToolSection
-              title="계산안 저장·비교"
-              description="계산 당시 결과를 보관하고 비교합니다."
-              status={
-                !snapshot
-                  ? "계산 후 저장 가능"
-                  : stale
-                    ? "재계산 필요"
-                    : "현재 결과 저장 가능"
-              }
-            >
-              <CalculationPlansPanel
-                key={`calculation-plans-${featureFormKey}`}
-                snapshot={snapshot}
-                stale={stale}
-              />
-            </ToolSection>
+              <div className="cp-review-plans">
+                <ToolSection
+                  title="계산안 저장·비교"
+                  description="계산 당시 결과를 보관하고 변경 전후를 비교합니다."
+                  status={
+                    !snapshot
+                      ? "계산 후 저장 가능"
+                      : stale
+                        ? "재계산 필요"
+                        : "현재 결과 저장 가능"
+                  }
+                >
+                  <CalculationPlansPanel
+                    key={`calculation-plans-${featureFormKey}`}
+                    snapshot={snapshot}
+                    stale={stale}
+                  />
+                </ToolSection>
+              </div>
+            </div>
           </div>
         </div>
       </main>
