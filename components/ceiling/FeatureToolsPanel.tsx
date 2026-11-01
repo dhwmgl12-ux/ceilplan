@@ -14,6 +14,7 @@ import {
   type FeatureTemplate,
 } from "@/lib/feature-template-storage";
 import { getRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
+import ToolSection from "@/components/ui/ToolSection";
 
 interface FeatureToolsPanelProps {
   inputs: SiteInput;
@@ -216,24 +217,34 @@ export default function FeatureToolsPanel({
   return (
     <section aria-labelledby="feature-tools-title" className="cp-card">
       <h2 id="feature-tools-title" className="cp-title">
-        복제·반복 배치·템플릿
+        보조 도구
       </h2>
 
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        요소의 종류·크기·위치만 추가합니다. 자재 조정값은 별도로 입력하세요.
+      <p className="mt-2 text-[11px] leading-5 text-slate-500">
+        반복 작업과 자주 사용하는 요소 규격을 관리합니다. 연결된 자재 조정값은
+        복사하지 않습니다.
       </p>
 
-      <p className="mt-3 text-sm font-medium">
-        {selectedFeature
-          ? `선택 요소: ${features.indexOf(selectedFeature) + 1}번 ${featureLabels[selectedFeature.type]}`
-          : "도면이나 목록에서 요소를 선택하세요."}
-      </p>
+      <div className="mt-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+        <p className="text-xs font-medium text-slate-700">
+          {selectedFeature
+            ? `${features.indexOf(selectedFeature) + 1}번 ${featureLabels[selectedFeature.type]} 선택 중`
+            : "선택된 요소 없음"}
+        </p>
 
-      <fieldset className="mt-4">
-        <legend className="text-sm font-semibold">
-          선택 요소 복제·반복 배치
-        </legend>
+        <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          {selectedFeature
+            ? `${selectedFeature.widthMm} × ${selectedFeature.lengthMm} mm · 복제와 템플릿 저장에 사용합니다.`
+            : "복제·템플릿 저장은 요소 선택 후 가능합니다. 저장한 템플릿 배치는 선택 없이 사용할 수 있습니다."}
+        </p>
+      </div>
 
+      <ToolSection
+        title="복제·반복 배치"
+        description="선택 요소를 지정한 간격으로 추가합니다."
+        status={selectedFeature ? "사용 가능" : "요소 선택 필요"}
+        className="mt-3"
+      >
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-sm">
             X 이동 간격 (mm)
@@ -297,11 +308,18 @@ export default function FeatureToolsPanel({
             반복 배치
           </button>
         </div>
-      </fieldset>
+      </ToolSection>
 
-      <fieldset className="mt-6 border-t border-slate-200 pt-4">
-        <legend className="text-sm font-semibold">사용자 템플릿</legend>
-
+      <ToolSection
+        title="사용자 템플릿"
+        description="요소 규격을 저장하거나 저장한 규격으로 배치합니다."
+        status={
+          templates.length > 0
+            ? `불러온 항목 ${templates.length}개`
+            : "목록 불러오기"
+        }
+        className="mt-3"
+      >
         <label className="mt-3 block text-sm">
           새 템플릿 이름
           <input
@@ -399,7 +417,7 @@ export default function FeatureToolsPanel({
           템플릿은 이 브라우저에 별도로 저장합니다. 프로젝트 JSON에는 템플릿
           목록이 포함되지 않습니다. 배치한 요소는 프로젝트에 저장됩니다.
         </p>
-      </fieldset>
+      </ToolSection>
 
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-700">

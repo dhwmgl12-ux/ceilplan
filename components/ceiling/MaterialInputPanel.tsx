@@ -1,206 +1,291 @@
 import type { MaterialInput } from "@/types/ceilplan";
+import NumberField from "@/components/ui/NumberField";
+import { useImperativeHandle, useRef, type Ref } from "react";
+
+export interface MaterialInputPanelHandle {
+  focusFirstPriceError: () => boolean;
+}
 
 interface MaterialInputPanelProps {
+  ref?: Ref<MaterialInputPanelHandle>;
+  showValidation?: boolean;
   inputs: MaterialInput;
   onChange: (field: keyof MaterialInput, value: string) => void;
 }
 
-interface NumberFieldProps {
+interface FieldDefinition {
+  key: keyof MaterialInput;
   label: string;
   unit: string;
-  value: string;
-  onChange: (value: string) => void;
   min?: number;
   step?: number | "any";
 }
 
-function NumberField({
-  label,
-  unit,
-  value,
-  onChange,
-  min = 1,
-  step = 1,
-}: NumberFieldProps) {
-  return (
-    <label className="block text-sm font-medium">
-      {label}
+const calculationGroups: {
+  title: string;
+  description?: string;
+  fields: FieldDefinition[];
+}[] = [
+  {
+    title: "골조 간격",
+    fields: [
+      {
+        key: "mbarSpacingMm",
+        label: "M-BAR",
+        unit: "mm",
+        step: 1,
+      },
+      {
+        key: "carryingSpacingMm",
+        label: "캐링채널",
+        unit: "mm",
+        step: 1,
+      },
+    ],
+  },
+  {
+    title: "석고보드",
+    fields: [
+      {
+        key: "boardWidthMm",
+        label: "보드 가로",
+        unit: "mm",
+        step: 1,
+      },
+      {
+        key: "boardLengthMm",
+        label: "보드 세로",
+        unit: "mm",
+        step: 1,
+      },
+      {
+        key: "layerCount",
+        label: "겹수",
+        unit: "겹",
+        step: 1,
+      },
+    ],
+  },
+  {
+    title: "구매 정척",
+    description: "거래처에서 구매하는 1본의 길이입니다.",
+    fields: [
+      {
+        key: "mbarStockLengthMm",
+        label: "M-BAR",
+        unit: "mm / 본",
+        step: 1,
+      },
+      {
+        key: "carryingStockLengthMm",
+        label: "캐링채널",
+        unit: "mm / 본",
+        step: 1,
+      },
+    ],
+  },
+];
 
-      <div className="mt-2 flex min-h-11 items-center rounded-lg border border-slate-200 bg-white">
-        <input
-          type="number"
-          min={min}
-          step={step}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="직접 입력"
-          className="h-11 min-w-0 w-full rounded-lg bg-transparent px-3 text-base text-slate-900 sm:text-sm"
-        />
+const lossFields: FieldDefinition[] = [
+  {
+    key: "boardLossPercent",
+    label: "석고보드",
+    unit: "%",
+    min: 0,
+    step: "any",
+  },
+  {
+    key: "metalLossPercent",
+    label: "금속 자재",
+    unit: "%",
+    min: 0,
+    step: "any",
+  },
+];
 
-        <span className="shrink-0 pr-3 text-xs text-slate-500">{unit}</span>
-      </div>
-    </label>
-  );
-}
+const priceFields: FieldDefinition[] = [
+  {
+    key: "boardUnitPrice",
+    label: "석고보드",
+    unit: "원 / 장",
+    min: 0,
+    step: "any",
+  },
+  {
+    key: "mbarUnitPrice",
+    label: "M-BAR",
+    unit: "원 / 본",
+    min: 0,
+    step: "any",
+  },
+  {
+    key: "carryingUnitPrice",
+    label: "캐링채널",
+    unit: "원 / 본",
+    min: 0,
+    step: "any",
+  },
+];
 
 export default function MaterialInputPanel({
   inputs,
   onChange,
+  ref,
+  showValidation = false,
 }: MaterialInputPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const priceDetailsRef = useRef<HTMLDetailsElement>(null);
+  const enteredPriceCount = priceFields.filter(
+    (field) => inputs[field.key].trim() !== "",
+  ).length;
+
+  function renderFields(fields: FieldDefinition[]) {
+    return fields.map((field) => (
+      <NumberField
+        key={field.key}
+        label={field.label}
+        unit={field.unit}
+        min={field.min}
+        step={field.step}
+        value={inputs[field.key]}
+        name={field.key}
+        error={getPriceError(field.key)}
+        onChange={(value) => onChange(field.key, value)}
+      />
+    ));
+  }
+
+  function getPriceError(field: keyof MaterialInput): string | undefined {
+    const isPriceField = priceFields.some((item) => item.key === field);
+
+    if (!showValidation || !isPriceField) return undefined;
+
+    const raw = inputs[field];
+
+    // 단가 공란은 기존 계산 정책에서 허용합니다.
+    if (!raw.trim()) return undefined;
+
+    const value = Number(raw);
+
+    if (!Number.isFinite(value) || value < 0) {
+      return "단가는 0 이상의 숫자로 입력하세요.";
+    }
+
+    return undefined;
+  }
+
+  useImperativeHandle(ref, () => ({
+    focusFirstPriceError() {
+      const firstError = priceFields.find(
+        (field) => getPriceError(field.key) !== undefined,
+      );
+
+      if (!firstError || !priceDetailsRef.current) {
+        return false;
+      }
+
+      priceDetailsRef.current.open = true;
+
+      const input = panelRef.current?.querySelector<HTMLInputElement>(
+        `input[name="${firstError.key}"]`,
+      );
+
+      if (!input) return false;
+
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+
+      return true;
+    },
+  }));
+
   return (
-    <div className="space-y-4">
+    <div ref={panelRef} className="space-y-3">
       <section aria-labelledby="material-input-title" className="cp-card">
         <h2 id="material-input-title" className="cp-title">
-          천장 계산 조건
+          계산 조건
         </h2>
 
+        <p className="mt-2 text-[11px] leading-5 text-slate-500">
+          간격과 규격은 현장 조건에 맞게 직접 입력하세요.
+        </p>
+
         <div className="mt-4 space-y-5">
-          <fieldset>
-            <legend className="mb-3 text-sm font-semibold">골조 간격</legend>
+          {calculationGroups.map((group, index) => (
+            <fieldset
+              key={group.title}
+              className={
+                index === 0
+                  ? "min-w-0"
+                  : "min-w-0 border-t border-slate-100 pt-4"
+              }
+            >
+              <legend className="mb-3 px-1 text-xs font-semibold text-slate-700">
+                {group.title}
+              </legend>
 
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField
-                label="M-BAR 간격"
-                unit="mm"
-                value={inputs.mbarSpacingMm}
-                onChange={(value) => onChange("mbarSpacingMm", value)}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                {renderFields(group.fields)}
+              </div>
 
-              <NumberField
-                label="캐링 간격"
-                unit="mm"
-                value={inputs.carryingSpacingMm}
-                onChange={(value) => onChange("carryingSpacingMm", value)}
-              />
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="mb-3 text-sm font-semibold">
-              석고보드 규격
-            </legend>
-
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField
-                label="보드 가로"
-                unit="mm"
-                value={inputs.boardWidthMm}
-                onChange={(value) => onChange("boardWidthMm", value)}
-              />
-
-              <NumberField
-                label="보드 세로"
-                unit="mm"
-                value={inputs.boardLengthMm}
-                onChange={(value) => onChange("boardLengthMm", value)}
-              />
-
-              <NumberField
-                label="겹수"
-                unit="겹"
-                value={inputs.layerCount}
-                onChange={(value) => onChange("layerCount", value)}
-              />
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="mb-3 text-sm font-semibold">
-              구매 정척 길이
-            </legend>
-
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField
-                label="M-BAR"
-                unit="mm / 본"
-                value={inputs.mbarStockLengthMm}
-                onChange={(value) => onChange("mbarStockLengthMm", value)}
-              />
-
-              <NumberField
-                label="캐링채널"
-                unit="mm / 본"
-                value={inputs.carryingStockLengthMm}
-                onChange={(value) => onChange("carryingStockLengthMm", value)}
-              />
-            </div>
-          </fieldset>
+              {group.description && (
+                <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                  {group.description}
+                </p>
+              )}
+            </fieldset>
+          ))}
         </div>
       </section>
 
       <section aria-labelledby="loss-title" className="cp-card">
-        <h2 id="loss-title" className="cp-title">
-          Loss 설정
-        </h2>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <NumberField
-            label="석고보드 Loss"
-            unit="%"
-            min={0}
-            step="any"
-            value={inputs.boardLossPercent}
-            onChange={(value) => onChange("boardLossPercent", value)}
-          />
-
-          <NumberField
-            label="금속 자재 Loss"
-            unit="%"
-            min={0}
-            step="any"
-            value={inputs.metalLossPercent}
-            onChange={(value) => onChange("metalLossPercent", value)}
-          />
-        </div>
-
-        <p className="mt-3 text-xs leading-5 text-slate-500">
-          Loss가 없으면 0을 입력하세요. 발주 단위 올림분과 별도로 계산합니다.
-        </p>
-      </section>
-
-      <section aria-labelledby="price-title" className="cp-card">
-        <div className="flex items-center justify-between gap-2">
-          <h2 id="price-title" className="cp-title">
-            자재 단가
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="loss-title" className="cp-title">
+            손실률 · Loss
           </h2>
 
-          <span className="text-xs text-slate-500">VAT 별도</span>
+          <span className="text-[11px] text-slate-500">발주 올림과 별도</span>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <NumberField
-            label="석고보드"
-            unit="원 / 장"
-            min={0}
-            step="any"
-            value={inputs.boardUnitPrice}
-            onChange={(value) => onChange("boardUnitPrice", value)}
-          />
-
-          <NumberField
-            label="M-BAR"
-            unit="원 / 본"
-            min={0}
-            step="any"
-            value={inputs.mbarUnitPrice}
-            onChange={(value) => onChange("mbarUnitPrice", value)}
-          />
-
-          <NumberField
-            label="캐링채널"
-            unit="원 / 본"
-            min={0}
-            step="any"
-            value={inputs.carryingUnitPrice}
-            onChange={(value) => onChange("carryingUnitPrice", value)}
-          />
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {renderFields(lossFields)}
         </div>
 
-        <p className="mt-3 text-xs leading-5 text-slate-500">
-          단가를 비우면 단가 미입력으로 처리합니다. 금속 자재 단가는 입력한 정척
-          1본 기준입니다.
+        <p className="mt-3 text-[11px] leading-5 text-slate-500">
+          손실을 적용하지 않으면 0을 입력하세요. 조정 후 물량에 적용하며, 구매
+          단위 올림은 이후에 계산합니다.
         </p>
       </section>
+
+      <details
+        ref={priceDetailsRef}
+        className="rounded-[var(--cp-radius-lg)] border border-[var(--cp-border)] bg-white"
+      >
+        <summary className="cursor-pointer rounded-[var(--cp-radius-lg)] px-4 py-4 sm:px-5">
+          <span className="text-[15px] font-bold tracking-tight text-slate-900">
+            자재 단가
+          </span>
+
+          <span className="ml-2 text-[11px] text-slate-500">
+            {enteredPriceCount} / {priceFields.length} 입력 · VAT 별도
+          </span>
+        </summary>
+
+        <div className="border-t border-slate-100 p-4 sm:p-5">
+          <div className="space-y-3">{renderFields(priceFields)}</div>
+
+          <p className="mt-3 text-[11px] leading-5 text-slate-500">
+            단가 공란은 미입력으로 처리합니다. 0원을 입력한 경우와 구분합니다.
+          </p>
+
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">
+            금속 자재 단가는 위에서 입력한 구매 정척 1본 기준입니다.
+          </p>
+        </div>
+      </details>
     </div>
   );
 }

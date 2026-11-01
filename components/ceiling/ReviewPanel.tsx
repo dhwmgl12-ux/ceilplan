@@ -40,7 +40,7 @@ export default function ReviewPanel({ items, onNavigate }: ReviewPanelProps) {
   const checkCount = items.filter((item) => item.level === "CHECK").length;
 
   return (
-    <section aria-labelledby="review-title" className="cp-card">
+    <section aria-labelledby="review-title" className="min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="review-title" className="cp-title">
           검토할 항목
@@ -71,14 +71,14 @@ export default function ReviewPanel({ items, onNavigate }: ReviewPanelProps) {
             if (matchingItems.length === 0) return null;
 
             return (
-              <details
+              <section
                 key={group.level}
-                open
-                className={`rounded-lg border p-3 ${group.className}`}
+                aria-label={group.label}
+                className={`rounded-md border p-3 ${group.className}`}
               >
-                <summary className="cursor-pointer text-sm font-semibold">
+                <h3 className="text-xs font-semibold">
                   {group.label} {matchingItems.length}개
-                </summary>
+                </h3>
 
                 <ul className="mt-3 space-y-3">
                   {matchingItems.map((item) => (
@@ -98,7 +98,7 @@ export default function ReviewPanel({ items, onNavigate }: ReviewPanelProps) {
                     </li>
                   ))}
                 </ul>
-              </details>
+              </section>
             );
           })}
         </div>

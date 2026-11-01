@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useDrawingBackground } from "@/hooks/useDrawingBackground";
 import DrawingBackgroundPanel from "./DrawingBackgroundPanel";
 import {
@@ -12,35 +12,43 @@ import {
   type CeilingFeature,
   type SiteInput,
   type CeilingFeatureType,
-  type Adjustment,
 } from "@/types/ceilplan";
 
 import { tryGetRoomGeometry, isBoxInsideRoom } from "@/lib/geometry/room";
+import CanvasToolbar from "./CanvasToolbar";
+
+export interface CeilingPreviewHandle {
+  beginPlacement: (type: CeilingFeatureType) => void;
+}
 
 interface CeilingPreviewProps {
+  ref?: Ref<CeilingPreviewHandle>;
   inputs: SiteInput;
   features: CeilingFeature[];
   onAdd: (feature: CeilingFeature) => void;
   onUpdate: (feature: CeilingFeature) => void;
-  adjustments: Adjustment[];
   activeFeatureId: string | null;
   onSelectFeature: (id: string | null) => void;
-  onShowSelectedInList: () => void;
+  editable?: boolean;
+  onRequestEdit?: () => void;
 }
 
 export default function CeilingPreview({
+  ref,
   inputs,
   features,
-  adjustments,
   activeFeatureId,
   onSelectFeature,
-  onShowSelectedInList,
   onAdd,
   onUpdate,
+  editable = true,
+  onRequestEdit,
 }: CeilingPreviewProps) {
   const background = useDrawingBackground();
   const backgroundClipId = useId().replaceAll(":", "");
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const [pointerMode, setPointerMode] = useState<FeaturePointerMode>("VIEW");
+  const effectiveMode: FeaturePointerMode = editable ? pointerMode : "VIEW";
 
   const [placementType, setPlacementType] =
     useState<CeilingFeatureType>("AIR_CONDITIONER");
@@ -106,7 +114,7 @@ export default function CeilingPreview({
     x,
     y,
     scale,
-    mode: pointerMode,
+    mode: effectiveMode,
     featureType: placementType,
     widthMm: placementWidth,
     lengthMm: placementLength,
@@ -115,198 +123,93 @@ export default function CeilingPreview({
     onSelectFeature,
   });
 
-  const selectedFeature = features.find(
-    (feature) => feature.id === activeFeatureId,
-  );
+  useImperativeHandle(ref, () => ({
+    beginPlacement(type) {
+      pointer.clearSession();
+      setPlacementType(type);
+      setPointerMode("PLACE");
 
-  const selectedFeatureNumber = selectedFeature
-    ? features.findIndex((feature) => feature.id === selectedFeature.id) + 1
-    : null;
+      // 배치 크기는 사용자가 입력합니다.
+      // 기존에 입력한 가로·세로 값은 유지합니다.
+      requestAnimationFrame(() => {
+        const input =
+          toolbarRef.current?.querySelector<HTMLInputElement>("input");
 
-  const linkedAdjustments = adjustments.filter(
-    (adjustment) => adjustment.featureId === activeFeatureId,
-  );
+        input?.focus({ preventScroll: true });
+
+        toolbarRef.current?.scrollIntoView({
+          behavior: "auto",
+          block: "nearest",
+        });
+      });
+    },
+  }));
 
   return (
-    <section aria-labelledby="preview-title" className="cp-card min-h-80">
-      <h2 id="preview-title" className="cp-title">
-        천장 미리보기
-      </h2>
+    <section aria-labelledby="preview-title" className="cp-canvas-panel">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cp-border)] px-4 py-3">
+        <div>
+          <h2 id="preview-title" className="cp-title">
+            {editable ? "설계 캔버스" : "공간 미리보기"}
+          </h2>
 
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        입력한 공간 치수를 기준으로 표시한 2D 평면도입니다.
-      </p>
-
-      <DrawingBackgroundPanel background={background} />
-
-      <div className="mt-4 rounded-lg border border-slate-200 p-3">
-        <div
-          role="group"
-          aria-label="도면 조작 모드"
-          className="flex flex-wrap gap-2"
-        >
-          {(
-            [
-              ["VIEW", "보기"],
-              ["PLACE", "요소 배치"],
-              ["MOVE", "요소 이동"],
-            ] as const
-          ).map(([mode, label]) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={pointerMode === mode}
-              onClick={() => {
-                pointer.clearSession();
-                setPointerMode(mode);
-              }}
-              className={
-                pointerMode === mode
-                  ? "cp-button-primary"
-                  : "cp-button-secondary"
-              }
-            >
-              {label}
-            </button>
-          ))}
+          <p className="mt-1 text-[11px] text-slate-500">
+            {editable
+              ? "요소를 선택·배치·이동합니다."
+              : "입력한 공간 형태와 치수를 확인합니다. 요소 편집은 별도 탭에서 진행합니다."}
+          </p>
         </div>
 
-        {pointerMode === "PLACE" && (
-          <div className="mt-4 space-y-3">
-            <label className="block text-sm font-medium">
-              배치할 요소
-              <select
-                value={placementType}
-                onChange={(event) => {
-                  pointer.clearSession();
-                  setPlacementType(event.target.value as CeilingFeatureType);
-                }}
-                className="cp-input mt-2"
-              >
-                {Object.entries(featureLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+          요소 {visibleFeatures.length} / {features.length}
+        </span>
+      </header>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-medium">
-                가로 (mm)
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={placementWidth}
-                  onChange={(event) => {
-                    pointer.clearSession();
-                    setPlacementWidth(event.target.value);
-                  }}
-                  className="cp-input mt-2"
-                />
-              </label>
-
-              <label className="block text-sm font-medium">
-                세로 (mm)
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={placementLength}
-                  onChange={(event) => {
-                    pointer.clearSession();
-                    setPlacementLength(event.target.value);
-                  }}
-                  className="cp-input mt-2"
-                />
-              </label>
-            </div>
-          </div>
-        )}
-
-        <p
-          id="preview-pointer-help"
-          className="mt-3 text-xs leading-5 text-slate-500"
-        >
-          {pointerMode === "VIEW"
-            ? "도형을 클릭·터치하면 목록과 연결된 조정값이 강조됩니다. 키보드로 도형에 이동한 뒤 Enter 또는 Space로 선택할 수도 있습니다."
-            : pointerMode === "PLACE"
-              ? "크기를 입력하고 도면을 클릭·터치하세요. 선택한 지점이 요소 중심입니다."
-              : "이동할 도형을 누른 채 끌어 놓으세요. 해당 요소도 함께 선택됩니다."}
-        </p>
-
-        <p role="status" className="mt-2 text-xs leading-5 text-blue-700">
-          {pointer.message}
-        </p>
+      <div ref={toolbarRef} hidden={!editable}>
+        <CanvasToolbar
+          mode={pointerMode}
+          onModeChange={(mode) => {
+            pointer.clearSession();
+            setPointerMode(mode);
+          }}
+          placementType={placementType}
+          onTypeChange={(type) => {
+            pointer.clearSession();
+            setPlacementType(type);
+          }}
+          placementWidth={placementWidth}
+          onWidthChange={(value) => {
+            pointer.clearSession();
+            setPlacementWidth(value);
+          }}
+          placementLength={placementLength}
+          onLengthChange={(value) => {
+            pointer.clearSession();
+            setPlacementLength(value);
+          }}
+          isValid={isValid}
+          message={pointer.message}
+        />
       </div>
 
-      {selectedFeature && (
-        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-semibold">
-                선택: {selectedFeatureNumber}번{" "}
-                {featureLabels[selectedFeature.type]}
-              </h3>
+      {!editable && (
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p
+            id="setup-preview-help"
+            className="text-xs leading-5 text-slate-500"
+          >
+            이 화면은 확인용입니다. 현장 요소 추가·이동은 요소 편집에서
+            진행하세요.
+          </p>
 
-              <p className="mt-2 text-xs leading-5 text-slate-600">
-                X {selectedFeature.xMm}, Y {selectedFeature.yMm} mm
-                <br />
-                가로 {selectedFeature.widthMm} × 세로 {selectedFeature.lengthMm}{" "}
-                mm
-              </p>
-            </div>
-
+          {onRequestEdit && (
             <button
               type="button"
-              onClick={() => onSelectFeature(null)}
-              className="cp-button-secondary"
+              onClick={onRequestEdit}
+              className="cp-button-secondary mt-2"
             >
-              선택 해제
+              요소 편집으로 이동
             </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onShowSelectedInList}
-            className="cp-button-secondary mt-3"
-          >
-            요소 목록으로 이동
-          </button>
-
-          <h4 className="mt-4 text-xs font-semibold">
-            연결된 조정값 {linkedAdjustments.length}개
-          </h4>
-
-          {linkedAdjustments.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-500">
-              연결된 조정값이 없습니다.
-            </p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {linkedAdjustments.map((adjustment) => (
-                <li
-                  key={adjustment.id}
-                  className="rounded bg-white p-2 text-xs leading-5"
-                >
-                  <p className="font-medium">
-                    {adjustment.materialId === "BOARD"
-                      ? "석고보드"
-                      : adjustment.materialId === "MBAR"
-                        ? "M-BAR"
-                        : "캐링채널"}
-                    {" · "}
-                    {adjustment.adjustmentType === "ADD" ? "추가" : "공제"}{" "}
-                    {adjustment.quantity} {adjustment.unit}
-                  </p>
-
-                  <p className="break-words text-slate-600">
-                    {adjustment.memo}
-                  </p>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       )}
@@ -314,21 +217,34 @@ export default function CeilingPreview({
       {isValid ? (
         <svg
           viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-          className="mt-4 block w-full"
+          preserveAspectRatio="xMidYMid meet"
+          className="cp-canvas-svg"
           role="group"
+          tabIndex={editable ? 0 : undefined}
           aria-labelledby="room-title room-description"
-          aria-describedby="preview-pointer-help"
+          aria-describedby={
+            editable ? "preview-pointer-help" : "setup-preview-help"
+          }
           style={{
-            touchAction: pointerMode === "VIEW" ? "auto" : "none",
+            touchAction: effectiveMode === "VIEW" ? "auto" : "none",
             cursor:
-              pointerMode === "PLACE"
+              effectiveMode === "PLACE"
                 ? "crosshair"
-                : pointerMode === "MOVE"
+                : effectiveMode === "MOVE"
                   ? "grab"
                   : "default",
           }}
+          onKeyDown={(event) => {
+            if (!editable || event.key !== "Escape") return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            pointer.clearSession();
+            setPointerMode("VIEW");
+          }}
           onClick={(event) => {
-            if (pointerMode !== "VIEW") return;
+            if (!editable || effectiveMode !== "VIEW") return;
 
             const target = event.target;
             if (!(target instanceof Element)) return;
@@ -339,9 +255,9 @@ export default function CeilingPreview({
 
             onSelectFeature(id ?? null);
           }}
-          onPointerDown={pointer.handlePointerDown}
-          onPointerMove={pointer.handlePointerMove}
-          onPointerUp={pointer.handlePointerUp}
+          onPointerDown={editable ? pointer.handlePointerDown : undefined}
+          onPointerMove={editable ? pointer.handlePointerMove : undefined}
+          onPointerUp={editable ? pointer.handlePointerUp : undefined}
           onPointerCancel={pointer.handlePointerCancel}
           onLostPointerCapture={pointer.handlePointerCancel}
         >
@@ -416,17 +332,25 @@ export default function CeilingPreview({
               <g
                 key={feature.id}
                 data-feature-id={feature.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${number}번 ${label} 선택`}
-                aria-pressed={activeFeatureId === feature.id}
+                role={editable ? "button" : undefined}
+                tabIndex={editable ? 0 : undefined}
+                aria-label={
+                  editable
+                    ? `${number}번 ${label} 선택`
+                    : `${number}번 ${label}`
+                }
+                aria-pressed={
+                  editable ? activeFeatureId === feature.id : undefined
+                }
                 onKeyDown={(event) => {
+                  if (!editable) return;
                   if (event.key !== "Enter" && event.key !== " ") return;
 
                   event.preventDefault();
                   event.stopPropagation();
 
                   pointer.clearSession();
+                  setPointerMode("VIEW");
                   onSelectFeature(feature.id);
                 }}
               >
@@ -697,7 +621,7 @@ export default function CeilingPreview({
             })}
           </g>
 
-          {pointer.draft && (
+          {editable && pointer.draft && (
             <rect
               x={x + pointer.draft.xMm * scale}
               y={y + pointer.draft.yMm * scale}
@@ -714,15 +638,17 @@ export default function CeilingPreview({
           )}
         </svg>
       ) : (
-        <div
-          role="status"
-          className="mt-4 flex aspect-[5/4] items-center justify-center rounded-lg border border-dashed border-blue-200 bg-blue-50/40 p-6"
-        >
-          <p className="text-center text-sm leading-6 text-slate-500">
-            공간 형태와 전체 치수,
-            <br />
-            제외 영역의 치수를 확인해 주세요.
-          </p>
+        <div role="status" className="cp-canvas-empty">
+          <div className="max-w-xs text-center">
+            <p className="text-sm font-semibold text-slate-700">
+              공간을 입력하면 도면이 표시됩니다
+            </p>
+
+            <p className="mt-2 text-xs leading-6 text-slate-500">
+              입력 패널에서 형태와 가로·세로를 입력하세요. ㄱ자·ㄷ자는 제외 영역
+              치수도 필요합니다.
+            </p>
+          </div>
         </div>
       )}
 
@@ -768,6 +694,9 @@ export default function CeilingPreview({
       <p className="mt-3 text-xs leading-5 text-slate-500">
         공간 형태를 확인하는 미리보기이며, 실제 자재 배치도는 아닙니다.
       </p>
+      <div hidden={!editable}>
+        <DrawingBackgroundPanel background={background} />
+      </div>
     </section>
   );
 }

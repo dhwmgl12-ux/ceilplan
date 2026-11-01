@@ -1,6 +1,7 @@
 "use client";
 
 import type { useDrawingBackground } from "@/hooks/useDrawingBackground";
+import ToolSection from "@/components/ui/ToolSection";
 
 type DrawingBackground = ReturnType<typeof useDrawingBackground>;
 
@@ -11,14 +12,26 @@ interface DrawingBackgroundPanelProps {
 export default function DrawingBackgroundPanel({
   background,
 }: DrawingBackgroundPanelProps) {
-  return (
-    <details className="mt-4 rounded-lg border border-slate-200 p-3">
-      <summary className="cursor-pointer text-sm font-semibold">
-        도면 이미지 배경
-        {background.image && " · 선택됨"}
-      </summary>
+  const status = background.loading
+    ? "이미지 읽는 중"
+    : background.error
+      ? "오류 확인"
+      : !background.image
+        ? "이미지 없음"
+        : !background.placementValid
+          ? "축척·위치 입력 필요"
+          : background.visible
+            ? "표시 중"
+            : "숨김";
 
-      <div className="mt-3 space-y-3">
+  return (
+    <ToolSection
+      title="도면 배경"
+      description="도면 이미지를 참고하며 공간과 요소를 수동 입력합니다."
+      status={status}
+      className="mt-4"
+    >
+      <div className="space-y-3">
         <p className="text-xs leading-5 text-slate-500">
           도면을 참고하면서 공간과 요소를 직접 입력합니다. 이미지 자체로
           면적이나 자재를 계산하지 않습니다.
@@ -159,6 +172,6 @@ export default function DrawingBackgroundPanel({
           않습니다.
         </p>
       </div>
-    </details>
+    </ToolSection>
   );
 }

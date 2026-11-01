@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import {
   featureLabels,
   type Adjustment,
@@ -8,8 +8,15 @@ import {
   type CeilingFeature,
   type MaterialId,
 } from "@/types/ceilplan";
+import PendingInputNotice from "@/components/ui/PendingInputNotice";
+
+export interface AdjustmentInputPanelHandle {
+  openForFeature: (featureId: string) => boolean;
+  editAdjustment: (adjustmentId: string) => boolean;
+}
 
 interface AdjustmentInputPanelProps {
+  ref?: Ref<AdjustmentInputPanelHandle>;
   features: CeilingFeature[];
   adjustments: Adjustment[];
   onAdd: (adjustment: Adjustment) => void;
@@ -26,6 +33,7 @@ const materialLabels: Record<MaterialId, string> = {
 };
 
 export default function AdjustmentInputPanel({
+  ref,
   features,
   adjustments,
   onAdd,
@@ -42,8 +50,24 @@ export default function AdjustmentInputPanel({
   const [error, setError] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginal, setEditingOriginal] = useState<Adjustment | null>(
+    null,
+  );
+
+  const hasPendingInput = editingOriginal
+    ? featureId !== editingOriginal.featureId ||
+      materialId !== editingOriginal.materialId ||
+      adjustmentType !== editingOriginal.adjustmentType ||
+      quantity !== String(editingOriginal.quantity) ||
+      memo !== editingOriginal.memo
+    : featureId !== "" ||
+      materialId !== "BOARD" ||
+      adjustmentType !== "ADD" ||
+      quantity !== "" ||
+      memo !== "";
 
   function resetForm() {
+    setEditingOriginal(null);
     setEditingId(null);
     setFeatureId("");
     setMaterialId("BOARD");
@@ -53,7 +77,23 @@ export default function AdjustmentInputPanel({
     setError("");
   }
 
-  function startEditing(adjustment: Adjustment) {
+  function startEditing(adjustment: Adjustment): boolean {
+    // 같은 조정값을 다시 열 때는 작성 중인 입력을 유지합니다.
+    if (editingId === adjustment.id) {
+      onSelectFeature(adjustment.featureId);
+      return true;
+    }
+
+    if (
+      hasPendingInput &&
+      !window.confirm(
+        "작성 중인 조정값 입력이 있습니다. 이 입력을 버리고 다른 조정값을 수정할까요?",
+      )
+    ) {
+      return false;
+    }
+
+    setEditingOriginal({ ...adjustment });
     setEditingId(adjustment.id);
     setFeatureId(adjustment.featureId);
     setMaterialId(adjustment.materialId);
@@ -62,6 +102,8 @@ export default function AdjustmentInputPanel({
     setMemo(adjustment.memo);
     setError("");
     onSelectFeature(adjustment.featureId);
+
+    return true;
   }
 
   // 선택했던 요소가 삭제됐으면 선택되지 않은 상태로 표시합니다.
@@ -70,6 +112,44 @@ export default function AdjustmentInputPanel({
     : "";
 
   const unit = materialId === "BOARD" ? "㎡" : "m";
+
+  useImperativeHandle(ref, () => ({
+    openForFeature(nextFeatureId) {
+      if (!features.some((feature) => feature.id === nextFeatureId)) {
+        return false;
+      }
+
+      // 같은 요소의 입력을 열 때는 수정 중인 내용을 유지합니다.
+      if (featureId === nextFeatureId) {
+        return true;
+      }
+
+      if (
+        hasPendingInput &&
+        !window.confirm(
+          "작성 중인 조정값 입력이 있습니다. 이 입력을 버리고 선택한 요소의 조정값을 입력할까요?",
+        )
+      ) {
+        return false;
+      }
+
+      resetForm();
+      setFeatureId(nextFeatureId);
+
+      return true;
+    },
+
+    editAdjustment(adjustmentId) {
+      const adjustment = adjustments.find((item) => item.id === adjustmentId);
+
+      if (!adjustment) {
+        setError("해당 조정값이 없습니다. 목록을 다시 확인하세요.");
+        return false;
+      }
+
+      return startEditing(adjustment);
+    },
+  }));
 
   function handleSubmit() {
     setError("");
@@ -80,6 +160,22 @@ export default function AdjustmentInputPanel({
     ) {
       setError("수정 중인 조정값이 삭제되었습니다. 수정 취소를 눌러주세요.");
       return;
+    }
+
+    if (editingId !== null && editingOriginal) {
+      const current = adjustments.find(
+        (adjustment) => adjustment.id === editingId,
+      );
+
+      if (
+        current &&
+        JSON.stringify(current) !== JSON.stringify(editingOriginal)
+      ) {
+        setError(
+          "수정 중 원본 조정값이 변경되었습니다. 수정 취소 후 다시 열어 최신 값을 확인하세요.",
+        );
+        return;
+      }
     }
 
     if (!selectedFeatureId) {
@@ -136,6 +232,8 @@ export default function AdjustmentInputPanel({
       <h2 id="adjustment-title" className="cp-title">
         현장 조정값
       </h2>
+
+      <PendingInputNotice visible={hasPendingInput} label="현장 조정값 폼" />
 
       <p className="mt-2 text-xs leading-5 text-slate-500">
         현장 요소 때문에 발생하는 자재 증감을 직접 입력합니다. 자동 공제·보강
@@ -249,8 +347,9 @@ export default function AdjustmentInputPanel({
 
         {editingId !== null && (
           <p role="status" className="text-xs leading-5 text-blue-700">
-            선택한 조정값을 수정 중입니다. 수정 적용을 눌러야 계산 입력에
-            반영됩니다.
+            이 폼에 표시된 연결 요소의 조정값을 수정 중입니다. 도면에서 다른
+            요소를 선택해도 수정 대상은 바뀌지 않습니다. 조정값 수정 적용을
+            눌러야 계산 입력에 반영됩니다.
           </p>
         )}
 
