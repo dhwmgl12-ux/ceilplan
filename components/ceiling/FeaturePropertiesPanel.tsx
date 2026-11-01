@@ -21,6 +21,7 @@ interface FeaturePropertiesPanelProps {
   onClearSelection: () => void;
   onShowInList: () => void;
   onShowAdjustments: () => void;
+  onEditAdjustment: (adjustmentId: string) => void;
 }
 
 interface PropertyValues {
@@ -68,6 +69,7 @@ export default function FeaturePropertiesPanel({
   onClearSelection,
   onShowInList,
   onShowAdjustments,
+  onEditAdjustment,
 }: FeaturePropertiesPanelProps) {
   // 요소마다 작성 중인 입력을 별도로 보관합니다.
   const [drafts, setDrafts] = useState(() => new Map<string, PropertyDraft>());
@@ -319,8 +321,9 @@ export default function FeaturePropertiesPanel({
       </div>
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
-        위치는 공간 왼쪽 위 기준입니다. 입력값은 수정 적용을 눌러야 도면에
-        반영됩니다. 요소별 미적용 입력은 선택을 바꿔도 유지됩니다.
+        X·Y는 공간 왼쪽 위를 기준으로 한 요소 왼쪽 위 좌표입니다. 수정 적용은
+        요소 종류·위치·크기만 반영합니다. 조정값은 별도로 적용하며, 요소별
+        미적용 입력은 선택을 바꿔도 유지됩니다.
       </p>
 
       {conflict && (
@@ -417,6 +420,20 @@ export default function FeaturePropertiesPanel({
                 </p>
 
                 <p className="mt-1 break-words text-slate-500">{item.memo}</p>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-500">
+                    근거: 사용자 입력
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => onEditAdjustment(item.id)}
+                    aria-label={`조정값 수정: ${item.memo}`}
+                    className="cp-button-secondary"
+                  >
+                    수정
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

@@ -48,7 +48,9 @@ import FeatureInputPanel from "./FeatureInputPanel";
 
 import FeatureToolsPanel from "./FeatureToolsPanel";
 
-import AdjustmentInputPanel from "./AdjustmentInputPanel";
+import AdjustmentInputPanel, {
+  type AdjustmentInputPanelHandle,
+} from "./AdjustmentInputPanel";
 
 import UsageGuide from "./UsageGuide";
 
@@ -195,6 +197,7 @@ export default function CeilingWorkspace({
     : null;
 
   const featureDetailsRef = useRef<HTMLDetailsElement>(null);
+  const adjustmentPanelRef = useRef<AdjustmentInputPanelHandle>(null);
 
   const ceilingPreviewRef = useRef<CeilingPreviewHandle>(null);
 
@@ -251,19 +254,36 @@ export default function CeilingWorkspace({
     });
   }
 
-  function handleShowAdjustments() {
+  function focusAdjustmentPanel() {
     openEditArea("properties");
 
     requestAnimationFrame(() => {
       const element = document.getElementById("adjustment-input-area");
 
+      element?.focus({ preventScroll: true });
       element?.scrollIntoView({
         behavior: "auto",
         block: "start",
       });
-
-      element?.focus({ preventScroll: true });
     });
+  }
+
+  function handleShowAdjustments() {
+    if (!activeFeatureId) return;
+
+    const opened = adjustmentPanelRef.current?.openForFeature(activeFeatureId);
+
+    if (!opened) return;
+
+    focusAdjustmentPanel();
+  }
+
+  function handleEditAdjustment(adjustmentId: string) {
+    const opened = adjustmentPanelRef.current?.editAdjustment(adjustmentId);
+
+    if (!opened) return;
+
+    focusAdjustmentPanel();
   }
 
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -985,10 +1005,12 @@ export default function CeilingWorkspace({
               onClearSelection={() => handleSelectFeature(null)}
               onShowInList={handleShowSelectedInList}
               onShowAdjustments={handleShowAdjustments}
+              onEditAdjustment={handleEditAdjustment}
             />
 
             <div id="adjustment-input-area" tabIndex={-1}>
               <AdjustmentInputPanel
+                ref={adjustmentPanelRef}
                 key={`adjustments-${featureFormKey}`}
                 features={features}
                 adjustments={adjustments}
