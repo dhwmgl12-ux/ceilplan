@@ -1174,3 +1174,153 @@ summary {
     display: none !important;
   }
 }
+
+/* 키보드 포커스 */
+.cp-shell
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible,
+.cp-housing-page
+  :where(
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    summary,
+    [tabindex]
+  ):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+/* 이동한 패널의 포커스 테두리가 잘리지 않도록 표시 */
+.cp-task-pane:focus-visible {
+  outline-offset: -2px;
+}
+
+/* 선택 상태를 색상과 테두리로 함께 표시 */
+.cp-shell-history button[aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* 스크롤 가능한 표의 키보드 포커스 */
+.cp-shell [role="region"][tabindex="0"]:focus-visible {
+  outline-offset: -2px;
+}
+
+/* 헤더와 패널 안의 긴 내용이 화면을 넓히지 않도록 처리 */
+.cp-project-actions,
+.cp-task-navigation,
+.cp-shell-history,
+.cp-shell-status,
+.cp-tool-body {
+  min-width: 0;
+}
+
+.cp-project-actions > button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* 모바일과 작은 태블릿 */
+@media screen and (max-width: 639px) {
+  .cp-shell-main {
+    padding: 8px;
+  }
+
+  .cp-task-navigation {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .cp-task-tab {
+    padding: 8px 6px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .cp-project-header {
+    padding: 10px 12px;
+  }
+
+  .cp-project-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .cp-shell-history {
+    padding: 8px;
+  }
+
+  .cp-shell-status {
+    padding-inline: 12px;
+  }
+
+  .cp-shell-status > button {
+    width: 100%;
+  }
+
+  .cp-command-dialog-body {
+    padding: 12px;
+  }
+
+  /* 모바일 입력 시 글자 크기 확보 */
+  .cp-input {
+    font-size: 16px;
+  }
+
+  .cp-canvas-svg {
+    height: clamp(280px, 52dvh, 480px);
+  }
+
+  .cp-canvas-empty {
+    min-height: 280px;
+  }
+}
+
+/*
+ * 높이가 낮은 노트북이나 브라우저 확대 환경:
+ * 고정 높이 때문에 본문이 사라지지 않도록 페이지 스크롤 사용
+ */
+@media screen and (min-width: 1280px) and (max-height: 740px) {
+  .cp-shell,
+  .cp-shell[data-embedded="true"] {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .cp-shell-main {
+    overflow: visible;
+  }
+
+  .cp-shell-header,
+  .cp-shell-notices {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .cp-shell-workspace {
+    height: auto;
+    overflow: visible;
+  }
+
+  .cp-shell-workspace > .cp-shell-pane {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* 움직임 최소화를 선택한 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  .cp-shell,
+  .cp-shell *,
+  .cp-housing-page,
+  .cp-housing-page * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -718,9 +718,57 @@ export default function CeilingWorkspace({
     });
   }
 
+  function handleWorkspaceTabChange(tab: WorkspaceTab) {
+    if (tab === activeTab) return;
+
+    setActiveTab(tab);
+
+    requestAnimationFrame(() => {
+      const targetId =
+        tab === "SETUP"
+          ? "inputs"
+          : tab === "REVIEW"
+            ? "workspace-results"
+            : editArea === "tools"
+              ? "workspace-tools"
+              : editArea === "properties"
+                ? "workspace-properties"
+                : "preview";
+
+      const element = document.getElementById(targetId);
+
+      element?.focus({ preventScroll: true });
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
+  }
+
   function openEditArea(area: "tools" | "canvas" | "properties") {
     setActiveTab("EDIT");
     setEditArea(area);
+  }
+
+  function navigateEditArea(area: "tools" | "canvas" | "properties") {
+    openEditArea(area);
+
+    requestAnimationFrame(() => {
+      const targetId =
+        area === "tools"
+          ? "workspace-tools"
+          : area === "canvas"
+            ? "preview"
+            : "workspace-properties";
+
+      const element = document.getElementById(targetId);
+
+      element?.focus({ preventScroll: true });
+      element?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
   }
 
   function moveAfterCalculation(id: "inputs" | "results") {
@@ -779,7 +827,10 @@ export default function CeilingWorkspace({
         )}
       </div>
 
-      <WorkspaceTabs activeTab={activeTab} onChange={setActiveTab} />
+      <WorkspaceTabs
+        activeTab={activeTab}
+        onChange={handleWorkspaceTabChange}
+      />
 
       <main id="main-content" tabIndex={-1} className="cp-shell-main">
         <div className="cp-shell-notices">
@@ -845,8 +896,15 @@ export default function CeilingWorkspace({
               <button
                 key={area}
                 type="button"
-                onClick={() => setEditArea(area)}
+                onClick={() => navigateEditArea(area)}
                 aria-pressed={editArea === area}
+                aria-controls={
+                  area === "tools"
+                    ? "workspace-tools"
+                    : area === "canvas"
+                      ? "preview"
+                      : "workspace-properties"
+                }
                 className="cp-button-secondary"
               >
                 {label}

@@ -220,6 +220,7 @@ export default function CeilingPreview({
           preserveAspectRatio="xMidYMid meet"
           className="cp-canvas-svg"
           role="group"
+          tabIndex={editable ? 0 : undefined}
           aria-labelledby="room-title room-description"
           aria-describedby={
             editable ? "preview-pointer-help" : "setup-preview-help"
